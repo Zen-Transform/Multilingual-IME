@@ -8,6 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 pytest = "^8.2.1"
+tqdm = "^4.66.4"
+pypinyin = "^0.51.0"
 
 
 [build-system]
