@@ -1,4 +1,4 @@
-import os
+import argparse
 import warnings
 
 import re
@@ -166,12 +166,43 @@ class LanguageCleaner:
                     f.write(cleaned_chunk)
         print(f"Cleaning Success: {output_file_path}")
 
+
+def main():
+    parser = argparse.ArgumentParser(description="Clean the input file to only contain the specified language characters and punctuation")
+    parser.add_argument("language", 
+                        choices=["chinese", "english"],
+                        help="The language to reserve, 'chinese' or 'english'")
+    
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-f", "--file", 
+        help="The input file path")
+    group.add_argument(
+        "-i", "--input",
+        help="The input string")
+
+    parser.add_argument(
+        "-o", "--output", 
+        help="The output file path")
+    parser.add_argument("--reserve_newline",
+                        default=True,
+                        action="store_true",
+                        help="Whether to reserve the newline character")
+
+    args = parser.parse_args()
+    if args.file:
+        LanguageCleaner.clean_file(args.file, args.output, args.language, args.reserve_newline)
+    elif args.string:
+        cleaned_string = LanguageCleaner.clean(args.string, args.language, args.reserve_newline)
+        print(cleaned_string)
+
 if __name__ == '__main__':
+    main()
+
     # test_input = "★ 內建智慧晶片可自動切換和雙系統接上即可使用"
     # print(LanguageCleaner.cleanChinese(test_input))
-    dir_path = os.path.dirname(__file__)
-    input_file = os.path.abspath(os.path.join(dir_path, "..\\Plain_Text_Datasets\\Chinese_news.txt"))
-    print(input_file)
-    output_file = os.path.abspath(os.path.join(dir_path, "..\\Plain_Text_Datasets\\Chinese_news-ch.txt"))
-    LanguageCleaner.clean_file_parallel(input_file, output_file, language="chinese", reserve_newline=True)
-
+    # dir_path = os.path.dirname(__file__)
+    # input_file = os.path.abspath(os.path.join(dir_path, "..\\Plain_Text_Datasets\\Chinese_news.txt"))
+    # print(input_file)
+    # output_file = os.path.abspath(os.path.join(dir_path, "..\\Plain_Text_Datasets\\Chinese_news-ch.txt"))
+    # LanguageCleaner.clean_file_parallel(input_file, output_file, language="chinese", reserve_newline=True)

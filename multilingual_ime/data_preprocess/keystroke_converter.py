@@ -1,6 +1,8 @@
 import os
+import sys
+import argparse
 
-from pypinyin import pinyin, lazy_pinyin, Style
+from pypinyin import pinyin, Style
 import multiprocessing
 from tqdm import tqdm
 
@@ -266,11 +268,65 @@ class KeyStrokeConverter:
                     f.write(cleaned_chunk)
         print(f"Conversion Success: {output_file_path}")
 
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert the input string to the specified type of keystroke")
+    parser.add_argument(
+        "convert_type", 
+        choices=["english", "cangjie", "bopomofo", "pinyin"], 
+        help="The type of keystroke to convert to"
+    )
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-f", "--file", 
+        type=str, 
+        help="The input file path"
+    )
+    group.add_argument(
+        "-i", "--input", 
+        type=str, 
+        help="The input string"
+    )
+    group.add_argument(
+        "-e", "--example",
+        action="store_true",
+        help="Show example"
+    )
+
+    parser.add_argument(
+        "-o", "--output", 
+        type=str, 
+        help="The output file path"
+    )
+
+    args = parser.parse_args()
+
+    if args.example:
+        input_string = "僅頒行政院長陳建仁今\n（16）日出席\n「112年鳳凰獎楷模表揚典禮」，頒獎表揚74名獲獎義消"
+        convert_type = "cangjie"
+        print("Example:")
+        print("uasage: " + convert_type + " -i " + input_string + "\n")
+        print("Input: \n" + input_string)
+        print("Convert type: \n" + convert_type)
+        print("Output: \n" + KeyStrokeConverter.convert(input_string, convert_type))
+        exit()
+
+    if args.input is not None:
+        if args.output is not None:
+            with open(args.output, "w", encoding="utf-8") as file:
+                file.write(KeyStrokeConverter.convert(args.input, args.convert_type))
+        else:
+            print(KeyStrokeConverter.convert(args.input, args.convert_type))
+    elif args.file is not None and args.output is not None:
+        KeyStrokeConverter.convert_file_parallel(input_file_path=args.file, output_file_path=args.output, convert_type=args.convert_type)
+    else:
+        print("Invalid arguments")
+
+
 if __name__ == '__main__':
-    input_string = "僅頒行政院長陳建仁今\n（16）日出席\n「112年鳳凰獎楷模表揚典禮」，頒獎表揚74名獲獎義消"
-    convert_type = "cangjie"
-    print(input_string)
-    print(KeyStrokeConverter.convert(input_string, convert_type))
-    # input_file =  "..\\Plain_Text_Datasets\\bbb.txt"
-    # output_file =  "..\\Key_Stroke_Datasets\\aaa.txt"
-    # KeyStrokeConverter.convert_file_parallel(input_file, output_file, convert_type="cangjie", num_processes=4)
+    main()
+    # input_string = "僅頒行政院長陳建仁今\n（16）日出席\n「112年鳳凰獎楷模表揚典禮」，頒獎表揚74名獲獎義消"
+    # convert_type = "cangjie"
+    # print(input_string)
+    # print(KeyStrokeConverter.convert(input_string, convert_type))

@@ -1,3 +1,4 @@
+import argparse
 import random
 
 from tqdm import tqdm
@@ -383,7 +384,57 @@ class TypoGenerater:
         print(f"Typo Generation Success: {output_file_path}")
 
 
+def main():
+    parser =  argparse.ArgumentParser("Generate typos for the input file with the given error rate and error type")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-i", "--input",
+        type=str,
+        help="The input string"
+    )
+    group.add_argument(
+        "-f", "--file",
+        type=str,
+        help="The input file path"
+    )
+
+    parser.add_argument(
+        "--error_type",
+        type=str,
+        choices=["random", "8adjacency"],
+        required=True,
+        help="The type of error, 'random' or '8adjacency'"
+    )
+
+    parser.add_argument(
+        "--error_rate",
+        type=float,
+        required=True,
+        help="The error rate (0 <= error_rate <= 1)"
+    )
+
+    parser.add_argument(
+        "-o", "--output",
+        type=str,
+        help="The output file path"
+    )
+
+    args = parser.parse_args()
+
+    if args.error_rate < 0 or args.error_rate > 1:
+        raise ValueError("error_rate should be between 0 and 1")
+
+    if args.input:
+        result = TypoGenerater.generate(args.input, args.error_type, args.error_rate)
+        print(result)
+    elif args.file:
+        TypoGenerater.generate_file_parallel(args.file, args.output, args.error_type, args.error_rate)
+    else:
+        raise ValueError("Either input or file should be provided")
+
 if __name__ == "__main__":
+    main()
     # input_string = "hello world"
     # count = 0
     # SAMPLE_SIZE = 10000
@@ -393,12 +444,12 @@ if __name__ == "__main__":
     #         count += 1
     # print("Error rate: {}/{} : {}".format(count, SAMPLE_SIZE, count / SAMPLE_SIZE))
 
-    ERROR_RATE = 0.1
-    ERROR_TYPE = "random"
+    # ERROR_RATE = 0.1
+    # ERROR_TYPE = "random"
 
-    input_file = "..\\Key_Stroke_Datasets\\aaa.txt"
-    print(input_file)
-    output_file = "..\\Key_Stroke_Datasets\\bbb.txt"
-    TypoGenerater.generate_file_parallel(
-        input_file, output_file, ERROR_TYPE, ERROR_RATE
-    )
+    # input_file = "..\\Key_Stroke_Datasets\\aaa.txt"
+    # print(input_file)
+    # output_file = "..\\Key_Stroke_Datasets\\bbb.txt"
+    # TypoGenerater.generate_file_parallel(
+    #     input_file, output_file, ERROR_TYPE, ERROR_RATE
+    # )
