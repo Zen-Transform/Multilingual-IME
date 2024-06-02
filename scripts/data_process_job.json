@@ -1,0 +1,552 @@
+[
+    {
+        "mode": "clean",
+        "description": "Clean Chinese_WebCrawlData_cc100.txt to chinese",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\Chinese_WebCrawlData_cc100.txt",
+        "output_file_path": ".\\Datasets\\Plain_Text_Datasets\\Chinese_WebCrawlData_cc100-ch.txt",
+        "language": "chinese",
+        "status": "done"
+    },
+    {
+        "mode": "clean",
+        "description": "Clean English_multi_news.txt to english",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\English_multi_news.txt",
+        "output_file_path": ".\\Datasets\\Plain_Text_Datasets\\English_multi_news-ch.txt",
+        "language": "english",
+        "status": "done"
+    },
+    {
+        "mode": "split_word",
+        "description": "Split Chinese_WebCrawlData_cc100-ch.txt into words with length 1-3",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\Chinese_WebCrawlData_cc100-ch.txt",
+        "output_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100.txt",
+        "min_split_word_len": 1,
+        "max_split_word_len": 3,
+        "language": "ch",
+        "status": "done"
+    },
+    {
+        "mode": "split_word",
+        "description": "Split English_multi_news-ch.txt into words with length 1-3",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\English_multi_news-ch.txt",
+        "output_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi.txt",
+        "min_split_word_len": 1,
+        "max_split_word_len": 3,
+        "language": "en",
+        "status": "done"
+    },
+    {
+        "mode": "split",
+        "description": "Split wlen1-3_cc100.txt with 0.5 into wlen1-3_cc100_train.txt and wlen1-3_cc100_test.txt datasets.",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100.txt",
+        "train_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_train.txt",
+        "test_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_test.txt",
+        "train_test_split_ratio": 0.5,
+        "status": "done"
+    },
+    {
+        "mode": "split",
+        "description": "Split wlen1-3_English_multi.txt with 0.5 into wlen1-3_English_multi_train.txt and wlen1-3_English_multi_test.txt datasets.",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi.txt",
+        "train_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_train.txt",
+        "test_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_test.txt",
+        "train_test_split_ratio": 0.5,
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_train.txt to bopomofo",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "convert_type": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_train.txt to cangjie",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "convert_type": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_train.txt to pinyin",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "convert_type": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_test.txt to bopomofo",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "convert_type": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_test.txt to cangjie",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "convert_type": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_cc100_test.txt to pinyin",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "convert_type": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_English_multi_train.txt to english",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "convert_type": "english",
+        "status": "done"
+    },
+    {
+        "mode": "convert",
+        "description": "Convert wlen1-3_English_multi_test.txt to english",
+        "input_file_path": ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "convert_type": "english",
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-1_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-05_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-1_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-05_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-1_cangjie_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-05_cangjie_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-1_cangjie_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-05_cangjie_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-1_pinyin_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-05_pinyin_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-1_pinyin_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-05_pinyin_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-1_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-05_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-1_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_bopomofo_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-05_bopomofo_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-1_cangjie_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-05_cangjie_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-1_cangjie_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_cangjie_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-05_cangjie_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-1_pinyin_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-05_pinyin_wlen1-3_cc100.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-1_pinyin_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_pinyin_wlen1-3_cc100.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-05_pinyin_wlen1-3_cc100.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-1_english_wlen1-3_English_multi.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\r0-05_english_wlen1-3_English_multi.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-1_english_wlen1-3_English_multi.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\8a0-05_english_wlen1-3_English_multi.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-1_english_wlen1-3_English_multi.txt",
+        "error_type": "random",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate 'random' error for .\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\r0-05_english_wlen1-3_English_multi.txt",
+        "error_type": "random",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.1",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-1_english_wlen1-3_English_multi.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.1,
+        "status": "done"
+    },
+    {
+        "mode": "gen_error",
+        "description": "Generate '8adjacency' error for .\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt with error rate 0.05",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\0_english_wlen1-3_English_multi.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\8a0-05_english_wlen1-3_English_multi.txt",
+        "error_type": "8adjacency",
+        "error_rate": 0.05,
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in training datasets and label them with bopomofo",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_train.txt",
+        "language": "bopomofo",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in testing datasets and label them with bopomofo",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_test.txt",
+        "language": "bopomofo",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in training datasets and label them with bopomofo",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_r0-1_train.txt",
+        "language": "bopomofo",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in testing datasets and label them with bopomofo",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_r0-1_test.txt",
+        "language": "bopomofo",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in training datasets and label them with cangjie",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_train.txt",
+        "language": "cangjie",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in testing datasets and label them with cangjie",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_test.txt",
+        "language": "cangjie",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in training datasets and label them with cangjie",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_r0-1_train.txt",
+        "language": "cangjie",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in testing datasets and label them with cangjie",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_r0-1_test.txt",
+        "language": "cangjie",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in training datasets and label them with pinyin",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_train.txt",
+        "language": "pinyin",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in testing datasets and label them with pinyin",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_test.txt",
+        "language": "pinyin",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in training datasets and label them with pinyin",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_r0-1_train.txt",
+        "language": "pinyin",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in testing datasets and label them with pinyin",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_r0-1_test.txt",
+        "language": "pinyin",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in training datasets and label them with english",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_train.txt",
+        "language": "english",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all 0 files in testing datasets and label them with english",
+        "prefix": "0",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_test.txt",
+        "language": "english",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in training datasets and label them with english",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_r0-1_train.txt",
+        "language": "english",
+        "status": null
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-1 files in testing datasets and label them with english",
+        "prefix": "r0-1",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_r0-1_test.txt",
+        "language": "english",
+        "status": null
+    }
+]
