@@ -1,2 +1,6 @@
 __pycache__
 tempCodeRunnerFile.py
+
+.pytest_cache
+/Datasets/Train_Datasets/*.txt
+/Datasets/Test_Datasets/*.txt
