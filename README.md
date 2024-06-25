@@ -30,3 +30,4 @@ poetry add [package]
 # run module as script
 python -m [module_name].[script]
 ```
+## Contributer
