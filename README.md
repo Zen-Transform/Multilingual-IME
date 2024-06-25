@@ -2,7 +2,7 @@
 
 ## Dependency
 
-Package mangager: [Poetry](https://python-poetry.org/)
+Package manager: [Poetry](https://python-poetry.org/)
 
 ## Project Structure
 
@@ -20,3 +20,13 @@ Package mangager: [Poetry](https://python-poetry.org/)
 - reports: storing system tesing report or log files
 - scripts: short script for data generations or others
 - tests: storing unit test code
+
+### How to run script
+
+```shell
+# install package
+poetry add [package]
+
+# run module as script
+python -m [module_name].[script]
+```
