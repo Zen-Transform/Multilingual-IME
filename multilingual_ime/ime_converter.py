@@ -85,7 +85,14 @@ class Trie():
                 for j, char2 in enumerate(s2):
                     insertions = previous_row[j + 1] + 1
                     deletions = current_row[j] + 1
-                    substitutions = previous_row[j] + (char1 != char2)
+                    # substitutions = previous_row[j] + (char1 != char2)
+                    if char1 != char2:
+                        if i > 0 and j > 0 and s1[i-1] == char2 and s1[i] == char1:
+                            substitutions = previous_row[j-1]
+                        else:
+                            substitutions = previous_row[j] + 1
+                    else:
+                        substitutions = previous_row[j]
 
                     current_row.append(min(insertions, deletions, substitutions))
 
@@ -159,13 +166,13 @@ if __name__ == "__main__":
     my_english_IMEConverter = EnglishIMEConverter(".\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json")
 
 
-    while True:
-        input_text = input('Enter text: ')
-        print("Bopomofo: ", my_bopomofo_IMEConverter.get_candidates(input_text, 3, 2))
-        print("Cangjie: ", my_cangjie_IMEConverter.get_candidates(input_text, 3, 2))
-        print("Pinyin: ", my_pinyin_IMEConverter.get_candidates(input_text, 3, 2))
-        print("English: ", my_english_IMEConverter.get_candidates(input_text, 3, 2))
-        print("\n")
+    # while True:
+    #     input_text = input('Enter text: ')
+    #     print("Bopomofo: ", my_bopomofo_IMEConverter.get_candidates(input_text, 3, 2))
+    #     print("Cangjie: ", my_cangjie_IMEConverter.get_candidates(input_text, 3, 2))
+    #     print("Pinyin: ", my_pinyin_IMEConverter.get_candidates(input_text, 3, 2))
+    #     print("English: ", my_english_IMEConverter.get_candidates(input_text, 3, 2))
+    #     print("\n")
 
     # my_converter = IMEConverter(".\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json")
     # input = "su3"
@@ -199,4 +206,7 @@ if __name__ == "__main__":
     #         previous_row = current_row
 
     #     return previous_row[-1]
-    # print(levenshteinDistance("su3", "s3u"))
+
+    # a = input()
+    # b = input()
+    # print(levenshteinDistance(a, b))
