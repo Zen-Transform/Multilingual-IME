@@ -11,7 +11,7 @@ pytest = "^8.2.1"
 tqdm = "^4.66.4"
 pypinyin = "^0.51.0"
 joblib = "^1.4.2"
-torch = "^2.3.1"
+torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.3.1%2Bcu121-cp39-cp39-win_amd64.whl"}
 numpy = "<2.0"
 
 
