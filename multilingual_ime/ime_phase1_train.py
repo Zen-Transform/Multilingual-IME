@@ -1,5 +1,6 @@
 import os
 import random
+from datetime import datetime
 
 import joblib
 import torch
@@ -7,8 +8,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils
 import torch.utils.data
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
+from torchmetrics.classification import MulticlassConfusionMatrix, MulticlassAccuracy
 
 from data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
 
@@ -35,19 +38,23 @@ print(f"Using {DEVICE} device")
 
 
 # DATA Configuration
-NUM_OF_TRAIN_DATA = 100  # 6B data
+NUM_OF_TRAIN_DATA = 600  # 6B data
 NONE_ERROR_VS_ERROR_RATIO = 0.75
 TRAIN_VAL_SPLIT_RATIO = 0.8
 MAX_TOKEN_SIZE = 30
 
 # Model Configuration
+MODEL_PREFIX = "one_hot_dl_model"
+LANGUAGE = "bopomofo"
+TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
 INPUT_SHAPE = MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length()
 NUM_CLASSES = 2
 
 # Training Configuration
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 32
 LEARNING_RATE = 0.001
+SKIP_VALIDATION = False
 
 
 if __name__ == "__main__":
@@ -70,7 +77,11 @@ if __name__ == "__main__":
     # format data to one-hot encoding and Tensor
     train_data_tensor = []
     for train_example in training_datas:
-        keystoke, target = train_example.split("\t")
+        try:  # fix error in data
+            keystoke, target = train_example.strip().split("\t")
+        except:
+            print(f"Error in line: {train_example}")
+            continue
 
         token_ids = KeystrokeTokenizer.token_to_ids(KeystrokeTokenizer.tokenize(keystoke))
         token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE 
@@ -110,46 +121,88 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()                                        
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    print("Start training")
-    with tqdm(range(EPOCHS)) as pbar:
-        for epoch in range(EPOCHS):
-            pbar.desc = f"Epoch {epoch+1}/{EPOCHS}"
+    fig = None
 
-            # Training
-            model.train()
-            train_correct = 0
-            train_total = 0
-            train_total_loss = 0
-            for batch_inputs, batch_labels in train_data_loader:
-                
-                batch_inputs, batch_labels = batch_inputs.to(DEVICE), batch_labels.to(DEVICE)
+    print("Start training")
+    best_val_acc = 0
+    for epoch in range(EPOCHS):
+        print(f"============ Epoch {epoch+1}/{EPOCHS} ============")
+
+        # Training
+        model.train()
+        train_predicts = []
+        train_labels = []
+        train_loss = 0
+        with tqdm(train_data_loader) as train_pbar:
+            for i, (batch_X, batch_Y) in enumerate(train_data_loader):
+                train_pbar.set_description(f"Train {i+1}/{len(train_data_loader)}")
+                batch_X, batch_Y = batch_X.to(DEVICE), batch_Y.to(DEVICE)
                 optimizer.zero_grad()
-                outputs = model(batch_inputs)
-                loss = criterion(outputs, batch_labels)
+                outputs = model(batch_X)
+                loss = criterion(outputs, batch_Y)
                 loss.backward()
                 optimizer.step()
-                train_total_loss += loss.item()
-                
-                _, predicted = torch.max(outputs.data, 0)
-                train_total += batch_labels.size(0)
-                train_correct += (predicted == batch_labels).sum().item()
 
-            pbar.set_postfix(training_loss=train_total_loss, train_acc=train_correct / train_total)
+                predictions = torch.argmax(outputs.data, dim=-1)
+                labels = torch.argmax(batch_Y, dim=-1)
+                # print(batch_Y)
+                # print(labels)
+                batch_loss = loss.item()
+                batch_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
 
+                train_predicts.append(predictions)
+                train_labels.append(labels)
+                train_loss += batch_loss
 
-            # Validation
-            model.eval()
-            val_correct = 0
-            val_total = 0
-            val_total_loss = 0
+                train_pbar.set_postfix(batch_loss=batch_loss, batch_acc=batch_acc(predictions, labels))
+                train_pbar.update(1)
+        
+        train_metric = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
+        print(f"Training loss: {train_loss}, Training accuracy: {train_metric(torch.cat(train_predicts), torch.cat(train_labels))}")
+
+        if SKIP_VALIDATION:
+            continue
+        
+        # Validation
+        model.eval()
+        val_predicts = []
+        val_labels = []
+        val_loss = 0
+        with tqdm(val_data_loader) as pbar:
             with torch.no_grad():
-                for batch_inputs, batch_labels in val_data_loader:
-                    batch_inputs, batch_labels = batch_inputs.to(DEVICE), batch_labels.to(DEVICE)
-                    outputs = model(batch_inputs)
-                    loss = criterion(outputs, batch_labels)
-                    val_total_loss += loss.item()
-                    _, predicted = torch.max(outputs.data, 0)
-                    val_total += batch_labels.size(0)
-                    val_correct += (predicted == batch_labels).sum().item()
-            pbar.set_postfix(val_loss=val_total_loss, val_acc=val_correct / val_total)
-            pbar.update(1)
+                for i, (batch_X, batch_Y) in enumerate(val_data_loader):
+                    pbar.set_description(f"Val {i+1}/{len(val_data_loader)}")
+                    batch_X, batch_Y = batch_X.to(DEVICE), batch_Y.to(DEVICE)
+                    outputs = model(batch_X)
+                    loss = criterion(outputs, batch_Y)
+
+
+                    predictions = torch.argmax(outputs.data, dim=-1)
+                    labels = torch.argmax(batch_Y, dim=-1)
+                    batch_val_loss = loss.item()
+                    batch_val_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
+
+                    val_predicts.append(predictions)
+                    val_labels.append(labels)
+                    val_loss += batch_val_loss
+                    
+                    pbar.set_postfix(batch_val_loss=batch_val_loss, batch_val_acc=batch_val_acc(predictions, labels))
+                    pbar.update(1)
+        val_acc_metric = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
+        val_acc = val_acc_metric(torch.cat(val_predicts), torch.cat(val_labels))
+        print(f"Validation loss: {val_loss}, Validation accuracy: {val_acc}")
+
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            print(f"Best model saved with accuracy {best_val_acc}")
+            joblib.dump(model, f"{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pkl")
+
+        print("====================================\n")
+
+    confusion_matrix = MulticlassConfusionMatrix(num_classes=NUM_CLASSES).to(DEVICE)
+    confusion_matrix(torch.cat(train_predicts), torch.cat(train_labels))
+    print(confusion_matrix.compute())
+    fig, ax = confusion_matrix.plot()
+    ax.set_title("Train Confusion Matrix")
+    fig.show()
+    plt.show(block=True)
