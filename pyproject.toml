@@ -13,6 +13,8 @@ pypinyin = "^0.51.0"
 joblib = "^1.4.2"
 torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.3.1%2Bcu121-cp39-cp39-win_amd64.whl"}  # Bad workaround, only for Cuda 12.1, Python 3.9, Windows_amd64, change the url according to your environment
 numpy = "<2.0"
+torchmetrics = "^1.4.0.post0"
+matplotlib = "^3.9.1"
 
 
 [build-system]
