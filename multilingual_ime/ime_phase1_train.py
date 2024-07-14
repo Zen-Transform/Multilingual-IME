@@ -77,11 +77,7 @@ if __name__ == "__main__":
     # format data to one-hot encoding and Tensor
     train_data_tensor = []
     for train_example in training_datas:
-        try:  # fix error in data
-            keystoke, target = train_example.strip().split("\t")
-        except:
-            print(f"Error in line: {train_example}")
-            continue
+        keystoke, target = train_example.strip('\n').split("\t")
 
         token_ids = KeystrokeTokenizer.token_to_ids(KeystrokeTokenizer.tokenize(keystoke))
         token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE 
