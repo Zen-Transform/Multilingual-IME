@@ -49,6 +49,7 @@ LANGUAGE = "bopomofo"
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
 INPUT_SHAPE = MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length()
 NUM_CLASSES = 2
+MODEL_SAVE_PATH = f".\\multilingual_ime\\src\\model_dump\\{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pkl"
 
 # Training Configuration
 EPOCHS = 100
@@ -191,7 +192,7 @@ if __name__ == "__main__":
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             print(f"Best model saved with accuracy {best_val_acc}")
-            joblib.dump(model, f"{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pkl")
+            joblib.dump(model, MODEL_SAVE_PATH)
 
         print("====================================\n")
 
