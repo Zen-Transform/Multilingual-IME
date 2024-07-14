@@ -1,11 +1,10 @@
-import joblib
 from abc import ABC, abstractmethod
 
+import joblib
+import torch
 from colorama import Fore, Style
 
-
-# from SVMClassification import custom_tokenizer_bopomofo, custom_tokenizer_cangjie, custom_tokenizer_pinyin # fix this depends on SVMClassification.py
-
+from data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
 
 class IMEDetector(ABC):
     @abstractmethod
@@ -20,6 +19,46 @@ class IMEDetector(ABC):
     def predict(self, input: str) -> str:
         pass
 
+MAX_TOKEN_SIZE = 30
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using {DEVICE} device")
+
+class IMEDetectorOneHot(IMEDetector):
+    def __init__(self, model_path: str) -> None:
+        super().__init__()
+        self._classifier = None
+        self.load_model(model_path)
+
+    def load_model(self, model_path: str) -> None:
+        try:
+            self._classifier = joblib.load(model_path)
+            print(f'Model loaded from {model_path}')
+            print(self._classifier)
+        except Exception as e:
+            print(f'Error loading model {model_path}')
+            print(e)
+
+    def _one_hot_encode(self, input_keystroke: str) -> torch.Tensor:
+        token_ids = KeystrokeTokenizer.token_to_ids(KeystrokeTokenizer.tokenize(input_keystroke))
+        token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE 
+        token_ids += [0] * (MAX_TOKEN_SIZE - len(token_ids))  # padding
+
+
+        one_hot_keystrokes = torch.zeros(MAX_TOKEN_SIZE, KeystrokeTokenizer.key_labels_length()) \
+                           + torch.eye(KeystrokeTokenizer.key_labels_length())[token_ids]
+        one_hot_keystrokes = one_hot_keystrokes.view(-1)  # flatten
+        return one_hot_keystrokes
+
+    def predict(self, input_keystroke: str) -> bool:
+        embedded_input = self._one_hot_encode(input_keystroke)
+        embedded_input = embedded_input.to(DEVICE)
+        self._classifier = self._classifier.to(DEVICE)
+
+        with torch.no_grad():
+            prediction = self._classifier(embedded_input)
+            prediction = torch.argmax(prediction).item()
+        return prediction
+    
 
 class IMEDetectorSVM(IMEDetector):
     def __init__(self, svm_model_path:str, tfidf_vectorizer_path:str) -> None:
@@ -76,10 +115,10 @@ class IMEDetectorSVM(IMEDetector):
 
 
 if __name__ == "__main__":
-    my_bopomofo_detector = IMEDetectorSVM('..\\Model_dump\\bopomofo_8adj.pkl', '..\\Model_dump\\vectorizer_bopomofo_8adj.pkl')
-    my_eng_detector = IMEDetectorSVM('..\\Model_dump\\english_8adj.pkl', '..\\Model_dump\\vectorizer_english_8adj.pkl')
-    my_cangjie_detector = IMEDetectorSVM('..\\Model_dump\\cangjie_8adj.pkl', '..\\Model_dump\\vectorizer_cangjie_8adj.pkl')
-    my_pinyin_detector = IMEDetectorSVM('..\\Model_dump\\pinyin_8adj.pkl', '..\\Model_dump\\vectorizer_pinyin_8adj.pkl')
+    my_bopomofo_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
+    my_eng_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
+    my_cangjie_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
+    my_pinyin_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
     input_text = "su3cl3"
     while True:
         input_text = input('Enter text: ')
