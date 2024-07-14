@@ -112,7 +112,7 @@ if __name__ == "__main__":
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(128, NUM_CLASSES),
-            nn.Softmax(dim=1),
+            nn.Softmax(dim=0),
         )
     model.to(DEVICE)
     criterion = nn.CrossEntropyLoss()                                        
