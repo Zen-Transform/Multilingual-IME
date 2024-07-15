@@ -412,7 +412,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_train.txt",
         "language": "bopomofo",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -421,7 +421,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_test.txt",
         "language": "bopomofo",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -430,7 +430,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_r0-1_train.txt",
         "language": "bopomofo",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -439,7 +439,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_r0-1_test.txt",
         "language": "bopomofo",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -448,7 +448,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_train.txt",
         "language": "cangjie",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -457,7 +457,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_test.txt",
         "language": "cangjie",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -466,7 +466,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_r0-1_train.txt",
         "language": "cangjie",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -475,7 +475,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_r0-1_test.txt",
         "language": "cangjie",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -484,7 +484,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_train.txt",
         "language": "pinyin",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -493,7 +493,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_test.txt",
         "language": "pinyin",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -502,7 +502,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_r0-1_train.txt",
         "language": "pinyin",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -511,7 +511,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_r0-1_test.txt",
         "language": "pinyin",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -520,7 +520,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_train.txt",
         "language": "english",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -529,7 +529,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_test.txt",
         "language": "english",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -538,7 +538,7 @@
         "input_file_paths": ".\\Datasets\\Train_Datasets\\",
         "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_r0-1_train.txt",
         "language": "english",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "merge",
@@ -547,6 +547,6 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_r0-1_test.txt",
         "language": "english",
-        "status": null
+        "status": "done"
     }
 ]
