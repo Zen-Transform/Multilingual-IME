@@ -20,14 +20,20 @@ class IMEDetector(ABC):
         pass
 
 MAX_TOKEN_SIZE = 30
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using {DEVICE} device")
+# DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"Using {DEVICE} device")
 
 class IMEDetectorOneHot(IMEDetector):
-    def __init__(self, model_path: str) -> None:
+    def __init__(self, model_path: str, device: str = "cuda") -> None:
         super().__init__()
         self._classifier = None
         self.load_model(model_path)
+        if device == "cuda" and not torch.cuda.is_available():
+            print("cuda is not available, using cpu instead")
+            device = "cpu"
+
+        self._DEVICE = device
+        print(f"Detector created using the {self._DEVICE} device.")
 
     def load_model(self, model_path: str) -> None:
         try:
@@ -51,8 +57,8 @@ class IMEDetectorOneHot(IMEDetector):
 
     def predict(self, input_keystroke: str) -> bool:
         embedded_input = self._one_hot_encode(input_keystroke)
-        embedded_input = embedded_input.to(DEVICE)
-        self._classifier = self._classifier.to(DEVICE)
+        embedded_input = embedded_input.to(self._DEVICE)
+        self._classifier = self._classifier.to(self._DEVICE)
 
         with torch.no_grad():
             prediction = self._classifier(embedded_input)

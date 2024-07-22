@@ -2,18 +2,24 @@ from .ime_detector import IMEDetectorOneHot
 
 
 class IMESeparator:
-    def __init__(self):
+    def __init__(self, use_cuda: bool = True) -> None:
+        self._DEVICE = "cuda" if use_cuda else "cpu"
+
         self._bopomofo_detector = IMEDetectorOneHot(
             "multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl",
+            device=self._DEVICE,
         )
         self._eng_detector = IMEDetectorOneHot(
             "multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-15.pkl",
+            device=self._DEVICE,
         )
         self._cangjie_detector = IMEDetectorOneHot(
             "multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-15.pkl",
+            device=self._DEVICE,
         )
         self._pinyin_detector = IMEDetectorOneHot(
             "multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-15.pkl",
+            device=self._DEVICE,
         )
 
     def separate(self, input_stroke: str) -> list[list[(str, str)]]:
@@ -47,6 +53,6 @@ class IMESeparator:
 
 
 if __name__ == "__main__":
-    my_separator = IMESeparator()
+    my_separator = IMESeparator(use_cuda=False)
     input_text = "su3cl3goodnight"
     print(my_separator.separate(input_text))
