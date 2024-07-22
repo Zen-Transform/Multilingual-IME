@@ -4,3 +4,4 @@ tempCodeRunnerFile.py
 .pytest_cache
 /Datasets/Train_Datasets/*.txt
 /Datasets/Test_Datasets/*.txt
+/tests/test_data/*.txt
