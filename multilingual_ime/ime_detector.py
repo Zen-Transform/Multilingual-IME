@@ -4,7 +4,7 @@ import joblib
 import torch
 from colorama import Fore, Style
 
-from data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
+from .data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
 
 class IMEDetector(ABC):
     @abstractmethod
