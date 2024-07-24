@@ -547,6 +547,134 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_r0-1_test.txt",
         "language": "english",
+        "status": null
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for bopomofo in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_reverse_train.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for bopomofo in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_reverse_test.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for cangjie in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_reverse_train.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for cangjie in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_reverse_test.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for pinyin in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_reverse_train.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for pinyin in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_reverse_test.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for english in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_reverse_train.txt",
+        "language": "english",
+        "status": "done"
+    },
+    {
+        "mode": "gen_reverse",
+        "description": "Generate reverse dataset for english in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_reverse_test.txt",
+        "language": "english",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for bopomofo in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_redundant_train.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for bopomofo in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_bopomofo_0_redundant_test.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for cangjie in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_cangjie_0_redundant_train.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for cangjie in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_cangjie_0_redundant_test.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for pinyin in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_pinyin_0_redundant_train.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for pinyin in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_pinyin_0_redundant_test.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for english in training dataset",
+        "input_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_train.txt",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_english_0_redundant_train.txt",
+        "language": "english",
+        "status": "done"
+    },
+    {
+        "mode": "gen_redundant",
+        "description": "Generate redundant dataset for english in testing dataset",
+        "input_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_test.txt",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_redundant_test.txt",
+        "language": "english",
         "status": "done"
     }
 ]

@@ -1,12 +1,15 @@
 import json
 import os
+import random
 
 from tqdm import tqdm
 
 from multilingual_ime.data_preprocess.language_cleaner import LanguageCleaner
 from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
 from multilingual_ime.data_preprocess.typo_generater import TypoGenerater
+from multilingual_ime.data_preprocess.ime_keys import IMEKeys
 
+random.seed(42)
 
 def split_train_test_file(input_file_path, train_file_path, test_file_path, train_test_split_size):
     with open(input_file_path, "r", encoding="utf-8") as file:
@@ -79,6 +82,70 @@ def merge_files(input_file_paths, output_file_path, target_language, prefix=""):
             for line in new_lines:
                 file.write(line + "\n")
 
+def write_list_to_file(file_path: str, lines: list) -> None:
+    with open(file_path, "w", encoding="utf-8") as file:
+        for line in lines:
+            file.write(line + "\n")
+
+
+ADVERSARIAL_CHAR_NUM = 1
+def generate_adversarial_file(input_file_path: str, output_file_path:str, language: str) -> None:
+    def add_adversarial_keystroke(keystroke: str, language: str) -> str:
+        if language == "english":
+            adversarial_keys = IMEKeys.universal_keys - IMEKeys.english_keys
+        elif language == "bopomofo":
+            adversarial_keys = IMEKeys.universal_keys - IMEKeys.bopomofo_keys
+        elif language == "cangjie":
+            adversarial_keys = IMEKeys.universal_keys - IMEKeys.cangjie_keys
+        elif language == "pinyin":
+            adversarial_keys = IMEKeys.universal_keys - IMEKeys.pinyin_keys
+        else:
+            raise ValueError("Invalid language: " + language)
+
+        adversarial_chars =  random.sample(list(adversarial_keys), ADVERSARIAL_CHAR_NUM)
+        for adversarial_char in adversarial_chars:
+            index = random.randint(0, len(keystroke))
+            keystroke = keystroke[:index] + adversarial_char + keystroke[index:]        
+        return keystroke
+
+    with open(input_file_path, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+        lines = [line.replace("\n", "") for line in lines]
+        lines = [line for line in lines if line.split("\t")[1] == "1"]
+    outlines = []
+    for line in lines:
+        outlines.append("{}\t0".format(add_adversarial_keystroke(line.split("\t")[0], language)))
+    write_list_to_file(output_file_path, outlines)
+
+
+REDUNDANT_CHAR_NUM = 1
+def generate_redundant_file(input_file_path: str, output_file_path:str, language: str) -> None:
+    def add_redundant_keystroke(keystroke: str, language: str) -> str:
+        if language == "english":
+            redundant_keys = IMEKeys.english_keys
+        elif language == "bopomofo":
+            redundant_keys = IMEKeys.bopomofo_keys
+        elif language == "cangjie":
+            redundant_keys = IMEKeys.cangjie_keys
+        elif language == "pinyin":
+            redundant_keys = IMEKeys.pinyin_keys
+        else:
+            raise ValueError("Invalid language: " + language)
+
+        redundant_chars =  random.sample(list(redundant_keys), REDUNDANT_CHAR_NUM)
+        keystroke = keystroke + "".join(redundant_chars)       
+        return keystroke
+
+    with open(input_file_path, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+        lines = [line.replace("\n", "") for line in lines]
+        lines = [line for line in lines if line.split("\t")[1] == "1"]
+    outlines = []
+    for line in lines:
+        outlines.append("{}\t0".format(add_redundant_keystroke(line.split("\t")[0], language)))
+    write_list_to_file(output_file_path, outlines)
+
+
 if __name__ == "__main__":
     NUM_PROCESSES = 4
     PROCESS_JOB_FILE = ".\\scripts\\data_process_job.json"
@@ -123,6 +190,10 @@ if __name__ == "__main__":
                     cut_keystroke_by(job["input_file_path"], job["output_file_path"], job["cut_out_len"])
                 elif job["mode"] == "merge":
                     merge_files(job["input_file_paths"], job["output_file_path"], job["language"], job["prefix"])
+                elif job["mode"] == "gen_reverse":
+                    generate_adversarial_file(job["input_file_path"], job["output_file_path"], job["language"])
+                elif job["mode"] == "gen_redundant":
+                    generate_redundant_file(job["input_file_path"], job["output_file_path"], job["language"])
                 else:
                     raise ValueError("Invalid mode: " + job["mode"])
                 
@@ -135,7 +206,6 @@ if __name__ == "__main__":
                 job["status"] = "error"
                 continue
             
-
 
     if len(unfinished_jobs) > 0:
         print("----- Unfinished jobs -----")

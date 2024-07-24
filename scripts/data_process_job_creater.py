@@ -162,8 +162,6 @@ if __name__ == "__main__":
                     "status": "done" if skip_gen_error else None
                     })
 
-    
-
 
     # merge all files and label them
     mode = "merge"
@@ -191,6 +189,51 @@ if __name__ == "__main__":
                 "language": target_language,
                 "status": "done" if skip_merge else None
                 })
+
+    # create inverse dataset
+    mode = "gen_reverse"
+    target_languages = ["bopomofo", "cangjie", "pinyin", "english"]
+    skip_gen_reverse = False
+
+    for target_language in target_languages:
+        job_list.append({
+            "mode": mode,
+            "description": f"Generate reverse dataset for {target_language} in training dataset",
+            "input_file_path": TRAIN_DATASET_PATH + f"labeled_{target_language}_0_train.txt",
+            "output_file_path": TRAIN_DATASET_PATH + f"labeled_{target_language}_0_reverse_train.txt",
+            "language": target_language,
+            "status": "done" if skip_gen_reverse else None
+            })
+        job_list.append({
+            "mode": mode,
+            "description": f"Generate reverse dataset for {target_language} in testing dataset",
+            "input_file_path": TEST_DATASET_PATH + f"labeled_{target_language}_0_test.txt",
+            "output_file_path": TEST_DATASET_PATH + f"labeled_{target_language}_0_reverse_test.txt",
+            "language": target_language,
+            "status": "done" if skip_gen_reverse else None
+            })
+
+
+    mode = "gen_redundant"
+    target_languages = ["bopomofo", "cangjie", "pinyin", "english"]
+    skip_gen_redundant = False
+    for target_language in target_languages:
+        job_list.append({
+            "mode": mode,
+            "description": f"Generate redundant dataset for {target_language} in training dataset",
+            "input_file_path": TRAIN_DATASET_PATH + f"labeled_{target_language}_0_train.txt",
+            "output_file_path": TRAIN_DATASET_PATH + f"labeled_{target_language}_0_redundant_train.txt",
+            "language": target_language,
+            "status": "done" if skip_gen_redundant else None
+            })
+        job_list.append({
+            "mode": mode,
+            "description": f"Generate redundant dataset for {target_language} in testing dataset",
+            "input_file_path": TEST_DATASET_PATH + f"labeled_{target_language}_0_test.txt",
+            "output_file_path": TEST_DATASET_PATH + f"labeled_{target_language}_0_redundant_test.txt",
+            "language": target_language,
+            "status": "done" if skip_gen_redundant else None
+            })
 
     if os.path.exists(FILE_NAME):
         if input("Do you want to append the new job to the existing job file? (y/n)") == "y":
