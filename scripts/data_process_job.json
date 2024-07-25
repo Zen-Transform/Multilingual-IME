@@ -547,7 +547,7 @@
         "input_file_paths": ".\\Datasets\\Test_Datasets\\",
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_r0-1_test.txt",
         "language": "english",
-        "status": null
+        "status": "done"
     },
     {
         "mode": "gen_reverse",
