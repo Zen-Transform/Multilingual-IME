@@ -1,23 +1,13 @@
 import argparse
-import warnings
-
 import re
 import multiprocessing
+
 from tqdm import tqdm
 
-def deprecated(func):
-    def wrapper(*args, **kwargs):
-        warnings.warn(f"\033[91m"+ "Call to deprecated function {func.__name__}" + "\033[0m", category=DeprecationWarning, stacklevel=2)
-        return func(*args, **kwargs)
-    return wrapper
-
-# Set warnings to raise an error by default
-warnings.simplefilter('error', DeprecationWarning)
 
 class LanguageCleaner:
     @staticmethod
-    @deprecated
-    def cleanChinese(input_string:str) -> str:
+    def cleanChinese(input_string:str, reserve_puncutation_symbol: bool = False, reserve_fullwidth_symbol: bool = False, reserve_new_line: bool = True) -> str:
         """
         Clean the input string to only contain Chinese characters and punctuation
         but not the newline
@@ -28,12 +18,18 @@ class LanguageCleaner:
         Returns:
             str: The cleaned string
         """
+        reg_reserve_exp = r"\u4e00-\u9fff"
+        if reserve_puncutation_symbol:
+            reg_reserve_exp += r"\u3000-\u303f"
+        if reserve_fullwidth_symbol:
+            reg_reserve_exp += r"\uff00-\uffef"
+        if reserve_new_line:
+            reg_reserve_exp += r"\n"
 
-        return re.sub(r"[^\u4e00-\u9fff\u3000-\u303f\uff00-\uffef\n]", "", input_string)
+        return re.sub(f"[^{reg_reserve_exp}]", "", input_string)
 
     @staticmethod
-    @deprecated
-    def cleanEnglish(input_string:str) -> str:
+    def cleanEnglish(input_string:str, reserve_punctuation: bool = False, reserve_numbers: bool = False, reserve_newline: bool = True) -> str:
         """
         Clean the input string to only contain English characters, punctuation and numbers
 
@@ -43,7 +39,15 @@ class LanguageCleaner:
         Returns:
             str: The cleaned string
         """
-        return re.sub(r"[^a-zA-Z0-9\.,\?! ]", "", input_string)
+        reg_reserve_exp = r"a-zA-Z "
+        if reserve_punctuation:
+            reg_reserve_exp += r"\.,\?!"
+        if reserve_numbers:
+            reg_reserve_exp += r"0-9"
+        if reserve_newline:
+            reg_reserve_exp += r"\n"
+
+        return re.sub(f"[^{reg_reserve_exp}]", "", input_string)
 
     @staticmethod
     def clean(input_string:str, language:str, reserve_newline:bool) -> str:
@@ -59,14 +63,13 @@ class LanguageCleaner:
             str: The cleaned string
         """
 
-        if language == "chinese":  # fix: make newline regex more readable, separate the logic
-            pattern = r"[^\u4e00-\u9fff\u3000-\u303f\uff00-\uffef\n]" if reserve_newline else r"[^\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]"
+        if language == "chinese":  # fix: bad code, hard coded reserve settings
+            return LanguageCleaner.cleanChinese(input_string, reserve_puncutation_symbol=False, reserve_fullwidth_symbol=False, reserve_new_line=reserve_newline)
         elif language == "english":
-            pattern = r"[^a-zA-Z0-9\.,\?! \n]" if reserve_newline else r"[^a-zA-Z0-9\.,\?! ]"
+            return LanguageCleaner.cleanEnglish(input_string, reserve_punctuation=False, reserve_numbers=False, reserve_newline=reserve_newline)
         else:
             raise ValueError("Error: language '{}' is not supported".format(language))
 
-        return re.sub(pattern, "", input_string)
 
     def clean_file(input_file_path:str, output_file_path: str, language:str, reserve_newline:bool=True):
         """
@@ -197,10 +200,16 @@ def main():
         print(cleaned_string)
 
 if __name__ == '__main__':
-    main()
+    # main()
 
-    # test_input = "★ 內建智慧晶片可自動切換和雙系統接上即可使用"
-    # print(LanguageCleaner.cleanChinese(test_input))
+    test_input_ch = "★ 內建智慧晶片可自動，切換和雙系統接上即可使用\n你超棒"
+    test_input_en = "★ This is a test string for English ，cleaning\nYou are awesome!!!"
+    print("===== Before cleaning =====")
+    print(test_input_ch)
+    print(test_input_en)
+    print("\n===== After cleaning =====")
+    print(LanguageCleaner.clean(test_input_ch, "chinese", reserve_newline=True))
+    print(LanguageCleaner.clean(test_input_en, "english", reserve_newline=True))
     # dir_path = os.path.dirname(__file__)
     # input_file = os.path.abspath(os.path.join(dir_path, "..\\Plain_Text_Datasets\\Chinese_news.txt"))
     # print(input_file)
