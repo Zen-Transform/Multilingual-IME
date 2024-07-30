@@ -15,6 +15,7 @@ random.seed(42)
 # Generate config
 DATA_AND_LABEL_SPLITTER = "\t©©©\t"
 USER_DEFINE_MAX_DATA_LINE = 20000
+USER_DEFINE_MAX_TEST_LINE = 2000
 CONVERT_LANGUAGES = ["bopomofo", "cangjie", "pinyin", "english"]
 ERROR_TYPE = "random"
 ERROR_RATE = 0
@@ -52,15 +53,17 @@ def process_line(chinese_line: str, english_line: str, k_num: int):
     return mix_ime_keystrokes + DATA_AND_LABEL_SPLITTER + line_answer
 
 
-def mutiprocess_test(separator: IMESeparator, mix_ime_keystrokes: str, separat_answer: str) -> dict:
+def mutiprocess_test(separator: IMESeparator, mix_ime_keystrokes: str, separate_answer: list) -> dict:
     separat_result = separator.separate(mix_ime_keystrokes)
-    is_correct = separat_answer in separat_result
+    is_correct = separate_answer in separat_result
     return {
         "Correct": is_correct,
+        "Output Len": len(separat_result),
         "Test_log": 
-            f"Mix_ime: {mix_ime_keystrokes}\n" + \
-            f"Answer: {separat_answer}\n" + \
-            f"Result: {separat_result}\n"
+            f"Input: {mix_ime_keystrokes}\n" + \
+            f"Label: {separate_answer}\n" + \
+            f"Output: {separat_result}\n" + \
+            f"Output Len: {len(separat_result)}\n"
     }
 
 
@@ -122,27 +125,34 @@ if __name__ == "__main__":
 
 
     # Testing mix ime
-    separator = IMESeparator(use_cuda=True)  # use_cuda=False for multi-processing test
+    separator = IMESeparator(use_cuda=False)  # use_cuda=False for multi-processing test
 
 
     wrong_answers = []
     with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
         test_config, test_lines = eval(lines[0]), lines[1:]
-
+        test_lines = random.sample(test_lines, min(len(test_lines), USER_DEFINE_MAX_TEST_LINE))
     try:
-        job_args = []
-        for line in test_lines:
+        results = []
+        for line in tqdm(test_lines):
             mix_ime_keystrokes, line_answer = line.strip().split(DATA_AND_LABEL_SPLITTER)
-            separat_answer = eval("["+line_answer.replace(")(", "), (")+"]")
-            job_args.append((separator, mix_ime_keystrokes, separat_answer))
+            label_answer = eval("["+line_answer.replace(")(", "), (")+"]")
+            separat_result = separator.separate(mix_ime_keystrokes)
+            results.append(mutiprocess_test(separator, mix_ime_keystrokes, label_answer))
 
-        multiprocessing_result = multiprocessing(mutiprocess_test, job_args, show_progress=True, preserve_order=True)
-        total_count = len(multiprocessing_result)
-        correct_count = sum([result["Correct"] for result in multiprocessing_result])
-        for result in multiprocessing_result:
-            if not result["Correct"]:
+        total_count = len(results)
+        correct_count = 0
+        len_score = 0
+        for result in results:
+            if result["Correct"]:
+                correct_count += 1
+            else:
                 wrong_answers.append(result["Test_log"])
+            
+            numerater = 1 if result["Correct"] else 0
+            denumerator = result["Output Len"]
+            len_score += numerater / denumerator if denumerator > 0 else 0
 
     except KeyboardInterrupt:
         print("User interrupt")
@@ -153,6 +163,7 @@ if __name__ == "__main__":
         print(f"correct: {correct_count}")
         print(f"total: {total_count}")
         print(f"Accuracy: {correct_count/total_count}, {correct_count}/{total_count}")
+        print(f"Len Score: {len_score/total_count}")
         with open(TEST_RESULT_FILE_PATH, "w", encoding="utf-8") as f:
             f.write(
                 f"============= Test Result =============\n" + \
@@ -160,5 +171,6 @@ if __name__ == "__main__":
                 f"Test Date: {TIMESTAMP}\n" + \
                 f"correct: {correct_count}\n" + \
                 f"total: {total_count}\n" + \
-                f"Accuracy: {correct_count/total_count}, {correct_count}/{total_count}\n\n" + \
+                f"Accuracy: {correct_count/total_count}, {correct_count}/{total_count}\n" + \
+                f"Len Score: {len_score/total_count}\n\n" + \
                 f"\n".join(wrong_answers))
