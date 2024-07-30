@@ -63,7 +63,7 @@ class IMEDetectorOneHot(IMEDetector):
         with torch.no_grad():
             prediction = self._classifier(embedded_input)
             prediction = torch.argmax(prediction).item()
-        return prediction
+        return prediction == 1
     
 
 class IMEDetectorSVM(IMEDetector):
@@ -121,21 +121,25 @@ class IMEDetectorSVM(IMEDetector):
 
 
 if __name__ == "__main__":
-    my_bopomofo_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
-    my_eng_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
-    my_cangjie_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
-    my_pinyin_detector = IMEDetectorOneHot('multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl')
-    input_text = "su3cl3"
-    while True:
-        input_text = input('Enter text: ')
-        is_bopomofo = my_bopomofo_detector.predict(input_text)
-        is_cangjie = my_cangjie_detector.predict(input_text)
-        is_english = my_eng_detector.predict(input_text)
-        is_pinyin = my_pinyin_detector.predict(input_text)
+    try:
+        my_bopomofo_detector = IMEDetectorOneHot('.\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-26.pkl')
+        my_eng_detector = IMEDetectorOneHot('.\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-26.pkl')
+        my_cangjie_detector = IMEDetectorOneHot('.\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-26.pkl')
+        my_pinyin_detector = IMEDetectorOneHot('.\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-26.pkl')
+        input_text = "su3cl3"
+        while True:
+            input_text = input('Enter text: ')
+            is_bopomofo = my_bopomofo_detector.predict(input_text)
+            is_cangjie = my_cangjie_detector.predict(input_text)
+            is_english = my_eng_detector.predict(input_text)
+            is_pinyin = my_pinyin_detector.predict(input_text)
 
-        print(Fore.GREEN + 'bopomofo'  if is_bopomofo else Fore.RED + 'bopomofo', end=' ')
-        print(Fore.GREEN + 'cangjie' if is_cangjie else Fore.RED + 'cangjie', end=' ')
-        print(Fore.GREEN + 'english' if is_english else Fore.RED + 'english', end=' ')
-        print(Fore.GREEN + 'pinyin' if is_pinyin else Fore.RED + 'pinyin', end=' ')
-        print(Style.RESET_ALL)
-        print()
+            print(Fore.GREEN + 'bopomofo'  if is_bopomofo else Fore.RED + 'bopomofo', end=' ')
+            print(Fore.GREEN + 'cangjie' if is_cangjie else Fore.RED + 'cangjie', end=' ')
+            print(Fore.GREEN + 'english' if is_english else Fore.RED + 'english', end=' ')
+            print(Fore.GREEN + 'pinyin' if is_pinyin else Fore.RED + 'pinyin', end=' ')
+            print(Style.RESET_ALL)
+            print()
+    except KeyboardInterrupt:
+        print('Exiting...')
+
