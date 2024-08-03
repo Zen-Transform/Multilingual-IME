@@ -58,12 +58,12 @@ def mutiprocess_test(separator: IMESeparator, mix_ime_keystrokes: str, separate_
     is_correct = separate_answer in separat_result
     return {
         "Correct": is_correct,
-        "Output Len": len(separat_result),
+        "Output_Len": len(separat_result),
         "Test_log": 
             f"Input: {mix_ime_keystrokes}\n" + \
             f"Label: {separate_answer}\n" + \
             f"Output: {separat_result}\n" + \
-            f"Output Len: {len(separat_result)}\n"
+            f"Output_Len: {len(separat_result)}\n"
     }
 
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     separator = IMESeparator(use_cuda=False)  # use_cuda=False for multi-processing test
 
 
-    wrong_answers = []
+    wrong_answer_logs = []
     with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
         test_config, test_lines = eval(lines[0]), lines[1:]
@@ -141,18 +141,20 @@ if __name__ == "__main__":
             separat_result = separator.separate(mix_ime_keystrokes)
             results.append(mutiprocess_test(separator, mix_ime_keystrokes, label_answer))
 
-        total_count = len(results)
+        total_test_example = len(results)
         correct_count = 0
+        prediction_len_count = 0
         len_score = 0
         for result in results:
             if result["Correct"]:
                 correct_count += 1
             else:
-                wrong_answers.append(result["Test_log"])
+                wrong_answer_logs.append(result["Test_log"])
             
             numerater = 1 if result["Correct"] else 0
-            denumerator = result["Output Len"]
+            denumerator = result["Output_Len"]
             len_score += numerater / denumerator if denumerator > 0 else 0
+            prediction_len_count += denumerator
 
     except KeyboardInterrupt:
         print("User interrupt")
@@ -160,17 +162,17 @@ if __name__ == "__main__":
     finally: 
         print("============= Test Result =============")       
         print(f"{test_config}")
-        print(f"correct: {correct_count}")
-        print(f"total: {total_count}")
-        print(f"Accuracy: {correct_count/total_count}, {correct_count}/{total_count}")
-        print(f"Len Score: {len_score/total_count}")
+        print(f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}")
+        print(f"Len Score: {len_score/total_test_example}")
         with open(TEST_RESULT_FILE_PATH, "w", encoding="utf-8") as f:
             f.write(
                 f"============= Test Result =============\n" + \
                 f"{test_config}\n" + \
                 f"Test Date: {TIMESTAMP}\n" + \
-                f"correct: {correct_count}\n" + \
-                f"total: {total_count}\n" + \
-                f"Accuracy: {correct_count/total_count}, {correct_count}/{total_count}\n" + \
-                f"Len Score: {len_score/total_count}\n\n" + \
-                f"\n".join(wrong_answers))
+                f"Total Test Sample: {total_test_example}\n" + \
+                f"Correct: {correct_count}\n" + \
+                f"Total Predictions: {prediction_len_count}\n" + \
+                f"Average Output Len: {prediction_len_count/total_test_example}\n" + \
+                f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n" + \
+                f"Len Score: {len_score/total_test_example}\n\n" + \
+                f"\n".join(wrong_answer_logs))
