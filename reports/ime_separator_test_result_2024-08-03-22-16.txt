@@ -1,11 +1,12 @@
 ============= Test Result =============
 # test with detector trained with 25% error、75% correct
 {'total_lines': 20000, 'NUM_OF_MIX_IME': 2, 'ERROR_RATE': 0, 'mix_count': {'mix_1': 0, 'mix_2': 20000}}
-Test Date: 2024-08-03-22-16
+Test Date: 2024-08-04-00-26
 Total Test Sample: 2000
 Correct: 1975
 Total Predictions: 29292
 Average Output Len: 14.646
+Average Correct Output Len: 14.527
 Accuracy: 0.9875, 1975/2000
 Len Score: 0.08790680381062417
 

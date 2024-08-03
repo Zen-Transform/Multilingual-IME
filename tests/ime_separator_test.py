@@ -144,10 +144,12 @@ if __name__ == "__main__":
         total_test_example = len(results)
         correct_count = 0
         prediction_len_count = 0
+        prediction_len_count_correct = 0
         len_score = 0
         for result in results:
             if result["Correct"]:
                 correct_count += 1
+                prediction_len_count_correct += result["Output_Len"]
             else:
                 wrong_answer_logs.append(result["Test_log"])
             
@@ -173,6 +175,7 @@ if __name__ == "__main__":
                 f"Correct: {correct_count}\n" + \
                 f"Total Predictions: {prediction_len_count}\n" + \
                 f"Average Output Len: {prediction_len_count/total_test_example}\n" + \
+                f"Average Correct Output Len: {prediction_len_count_correct/total_test_example}\n" + \
                 f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n" + \
                 f"Len Score: {len_score/total_test_example}\n\n" + \
                 f"\n".join(wrong_answer_logs))
