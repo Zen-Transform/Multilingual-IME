@@ -6,19 +6,19 @@ class IMESeparator:
         self._DEVICE = "cuda" if use_cuda else "cpu"
 
         self._bopomofo_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-14.pkl",
+            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._eng_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-15.pkl",
+            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._cangjie_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-15.pkl",
+            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._pinyin_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-15.pkl",
+            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-26.pkl",
             device=self._DEVICE,
         )
 
