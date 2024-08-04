@@ -1,0 +1,160 @@
+============= Test Result =============
+{'Data_format': 'mix_ime_keystrokes\t©©©\tseparate_answer\t©©©\tplain_text', 'Total_lines': 20000, 'NUM_OF_MIX_IME': 2, 'ERROR_RATE': 0, 'Mix_count': {'mix_1': 0, 'mix_2': 20000}}
+Test Date: 2024-08-04-22-46
+Total Test Sample: 2000
+Correct: 1970
+Total Predictions: 28607
+Average Output Len: 14.3035
+Average Correct Output Len: 14.1625
+Accuracy: 0.985, 1970/2000
+Len Score: 0.08685882714846409
+
+Input: knownjibi sje oimbc 
+Label: [('english', 'known'), ('cangjie', 'jibi sje oimbc ')]
+Output: [[('pinyin', 'kn'), ('cangjie', 'ownjibi sje oimbc ')], [('pinyin', 'kno'), ('cangjie', 'wnjibi sje oimbc ')], [('pinyin', 'know'), ('cangjie', 'njibi sje oimbc ')], [('pinyin', 'known'), ('cangjie', 'jibi sje oimbc ')], [('pinyin', 'knownj'), ('cangjie', 'ibi sje oimbc ')], [('pinyin', 'knownji'), ('cangjie', 'bi sje oimbc ')], [('pinyin', 'knownjib'), ('cangjie', 'i sje oimbc ')], [('pinyin', 'knownjibi'), ('cangjie', ' sje oimbc ')], [('pinyin', 'knownjibi'), ('english', ' sje oimbc ')], [('pinyin', 'knownjibi '), ('cangjie', 'sje oimbc ')]]
+Output_Len: 10
+
+Input: join194z;3w96
+Label: [('english', 'join'), ('bopomofo', '194z;3w96')]
+Output: [[('pinyin', 'jo'), ('bopomofo', 'in194z;3w96')], [('pinyin', 'joi'), ('bopomofo', 'n194z;3w96')], [('pinyin', 'join'), ('bopomofo', '194z;3w96')], [('pinyin', 'join1'), ('bopomofo', '94z;3w96')], [('pinyin', 'join19'), ('bopomofo', '4z;3w96')], [('bopomofo', 'join194z;3w9'), ('english', '6')]]
+Output_Len: 6
+
+Input: outgoingshizhi
+Label: [('english', 'outgoing'), ('pinyin', 'shizhi')]
+Output: [[('pinyin', 'ou'), ('english', 'tgoingshizhi')], [('english', 'out'), ('pinyin', 'goingshizhi')], [('english', 'outg'), ('pinyin', 'oingshizhi')], [('english', 'outgoi'), ('cangjie', 'ngshizhi')], [('english', 'outgoi'), ('pinyin', 'ngshizhi')], [('pinyin', 'outgoi'), ('cangjie', 'ngshizhi')], [('english', 'outgoings'), ('pinyin', 'hizhi')], [('english', 'outgoingsh'), ('pinyin', 'izhi')], [('english', 'outgoingshi'), ('pinyin', 'zhi')], [('english', 'outgoingshiz'), ('pinyin', 'hi')], [('english', 'outgoingshizh'), ('pinyin', 'i')], [('pinyin', 'outgoingshizh'), ('english', 'i')]]
+Output_Len: 12
+
+Input: kuailianggegain
+Label: [('pinyin', 'kuailiangge'), ('english', 'gain')]
+Output: [[('english', 'k'), ('pinyin', 'uailianggegain')], [('pinyin', 'ku'), ('english', 'ailianggegain')], [('pinyin', 'kuaili'), ('english', 'anggegain')], [('pinyin', 'kuailianggeg'), ('english', 'ain')], [('pinyin', 'kuailianggega'), ('english', 'in')], [('pinyin', 'kuailianggegai'), ('english', 'n')]]
+Output_Len: 6
+
+Input: uniqueyouzi
+Label: [('english', 'unique'), ('pinyin', 'youzi')]
+Output: [[('english', 'u'), ('pinyin', 'niqueyouzi')], [('english', 'un'), ('pinyin', 'iqueyouzi')], [('english', 'uni'), ('pinyin', 'queyouzi')], [('pinyin', 'uniqueyouz'), ('english', 'i')]]
+Output_Len: 4
+
+Input: opd lmfbt by
+Label: [('cangjie', 'opd lmfbt '), ('english', 'by')]
+Output: [[('english', 'o'), ('cangjie', 'pd lmfbt by')], [('cangjie', 'opd'), ('english', ' lmfbt by')], [('english', 'opd'), ('cangjie', ' lmfbt by')], [('cangjie', 'opd l'), ('english', 'mfbt by')], [('cangjie', 'opd lm'), ('english', 'fbt by')], [('english', 'opd lm'), ('cangjie', 'fbt by')], [('english', 'opd lmf'), ('cangjie', 'bt by')], [('cangjie', 'opd lmfb'), ('english', 't by')], [('english', 'opd lmfb'), ('cangjie', 't by')], [('cangjie', 'opd lmfbt'), ('english', ' by')], [('cangjie', 'opd lmfbt '), ('pinyin', 'by')], [('cangjie', 'opd lmfbt b'), ('english', 'y')]]
+Output_Len: 12
+
+Input: xianggangjiaoyou back in
+Label: [('pinyin', 'xianggangjiao'), ('english', 'you back in')]
+Output: [[('english', 'x'), ('pinyin', 'ianggangjiaoyou back in')], [('pinyin', 'xi'), ('english', 'anggangjiaoyou back in')], [('pinyin', 'xia'), ('english', 'nggangjiaoyou back in')], [('pinyin', 'xiangga'), ('cangjie', 'ngjiaoyou back in')], [('pinyin', 'xianggangj'), ('english', 'iaoyou back in')], [('pinyin', 'xianggangji'), ('cangjie', 'aoyou back in')], [('pinyin', 'xianggangji'), ('english', 'aoyou back in')], [('pinyin', 'xianggangjia'), ('cangjie', 'oyou back in')], [('pinyin', 'xianggangjiao'), ('cangjie', 'you back in')], [('pinyin', 'xianggangjiaoy'), ('cangjie', 'ou back in')], [('pinyin', 'xianggangjiaoy'), ('english', 'ou back in')], [('pinyin', 'xianggangjiaoyo'), ('cangjie', 'u back in')], [('pinyin', 'xianggangjiaoyou'), ('english', ' back in')], [('pinyin', 'xianggangjiaoyou '), ('cangjie', 'back in')], [('pinyin', 'xianggangjiaoyou '), ('english', 'back in')], [('pinyin', 'xianggangjiaoyou b'), ('cangjie', 'ack in')], [('pinyin', 'xianggangjiaoyou b'), ('english', 'ack in')], [('pinyin', 'xianggangjiaoyou ba'), ('cangjie', 'ck in')], [('pinyin', 'xianggangjiaoyou bac'), ('cangjie', 'k in')], [('pinyin', 'xianggangjiaoyou back'), ('english', ' in')], [('pinyin', 'xianggangjiaoyou back '), ('english', 'in')], [('pinyin', 'xianggangjiaoyou back i'), ('english', 'n')]]
+Output_Len: 22
+
+Input: poplunging
+Label: [('pinyin', 'po'), ('english', 'plunging')]
+Output: [[('english', 'p'), ('pinyin', 'oplunging')], [('english', 'po'), ('pinyin', 'plunging')], [('english', 'pop'), ('pinyin', 'lunging')], [('english', 'popl'), ('pinyin', 'unging')], [('english', 'poplu'), ('cangjie', 'nging')], [('english', 'poplu'), ('pinyin', 'nging')], [('english', 'poplun'), ('pinyin', 'ging')], [('english', 'poplung'), ('cangjie', 'ing')], [('english', 'poplung'), ('pinyin', 'ing')], [('english', 'poplungi'), ('cangjie', 'ng')], [('english', 'poplungi'), ('pinyin', 'ng')], [('pinyin', 'poplungi'), ('cangjie', 'ng')]]
+Output_Len: 12
+
+Input: b42l4gg
+Label: [('bopomofo', 'b42l4'), ('english', 'gg')]
+Output: [[('english', 'b'), ('bopomofo', '42l4gg')], [('pinyin', 'b'), ('bopomofo', '42l4gg')], [('bopomofo', 'b42l'), ('cangjie', '4gg')], [('bopomofo', 'b42l4'), ('pinyin', 'gg')], [('bopomofo', 'b42l4g'), ('english', 'g')]]
+Output_Len: 5
+
+Input: hjp6kind
+Label: [('bopomofo', 'hjp6'), ('english', 'kind')]
+Output: [[('english', 'h'), ('bopomofo', 'jp6kind')], [('bopomofo', 'hjp6'), ('pinyin', 'kind')], [('bopomofo', 'hjp6k'), ('english', 'ind')], [('bopomofo', 'hjp6ki'), ('cangjie', 'nd')], [('bopomofo', 'hjp6ki'), ('pinyin', 'nd')], [('bopomofo', 'hjp6kin'), ('english', 'd')], [('bopomofo', 'hjp6kin'), ('pinyin', 'd')]]
+Output_Len: 7
+
+Input: chanmany
+Label: [('pinyin', 'chan'), ('english', 'many')]
+Output: [[('english', 'c'), ('pinyin', 'hanmany')], [('english', 'ch'), ('pinyin', 'anmany')], [('pinyin', 'ch'), ('english', 'anmany')], [('english', 'cha'), ('cangjie', 'nmany')], [('english', 'cha'), ('pinyin', 'nmany')], [('pinyin', 'cha'), ('cangjie', 'nmany')], [('english', 'chan'), ('pinyin', 'many')], [('pinyin', 'chanm'), ('english', 'any')], [('pinyin', 'chanman'), ('english', 'y')]]
+Output_Len: 9
+
+Input: yphen up
+Label: [('cangjie', 'yphen '), ('english', 'up')]
+Output: [[('pinyin', 'yphen'), ('english', ' up')], [('cangjie', 'yphen '), ('bopomofo', 'up')], [('cangjie', 'yphen u'), ('english', 'p')]]
+Output_Len: 3
+
+Input: oam kind
+Label: [('cangjie', 'oam '), ('english', 'kind')]
+Output: [[('english', 'o'), ('cangjie', 'am kind')], [('english', 'oa'), ('cangjie', 'm kind')], [('pinyin', 'oa'), ('cangjie', 'm kind')], [('cangjie', 'oam '), ('pinyin', 'kind')], [('english', 'oam '), ('pinyin', 'kind')], [('cangjie', 'oam k'), ('english', 'ind')], [('cangjie', 'oam ki'), ('pinyin', 'nd')], [('english', 'oam ki'), ('cangjie', 'nd')], [('english', 'oam ki'), ('pinyin', 'nd')], [('cangjie', 'oam kin'), ('english', 'd')], [('cangjie', 'oam kin'), ('pinyin', 'd')], [('english', 'oam kin'), ('pinyin', 'd')]]
+Output_Len: 12
+
+Input: wul qishiye
+Label: [('bopomofo', 'wul '), ('pinyin', 'qishiye')]
+Output: [[('english', 'w'), ('cangjie', 'ul qishiye')], [('pinyin', 'wul'), ('english', ' qishiye')], [('cangjie', 'wul q'), ('english', 'ishiye')], [('cangjie', 'wul q'), ('pinyin', 'ishiye')], [('english', 'wul qis'), ('pinyin', 'hiye')]]
+Output_Len: 5
+
+Input: vpd hapi by
+Label: [('cangjie', 'vpd hapi '), ('english', 'by')]
+Output: [[('english', 'v'), ('cangjie', 'pd hapi by')], [('bopomofo', 'vp'), ('cangjie', 'd hapi by')], [('cangjie', 'vpd'), ('english', ' hapi by')], [('cangjie', 'vpd h'), ('english', 'api by')], [('cangjie', 'vpd hapi'), ('english', ' by')], [('cangjie', 'vpd hapi '), ('pinyin', 'by')], [('cangjie', 'vpd hapi b'), ('english', 'y')]]
+Output_Len: 7
+
+Input: guideru; 
+Label: [('english', 'guide'), ('bopomofo', 'ru; ')]
+Output: [[('pinyin', 'gu'), ('english', 'ideru; ')], [('pinyin', 'gui'), ('english', 'deru; ')], [('pinyin', 'guid'), ('cangjie', 'eru; ')], [('pinyin', 'guide'), ('bopomofo', 'ru; ')], [('english', 'guider'), ('bopomofo', 'u; ')], [('pinyin', 'guider'), ('bopomofo', 'u; ')], [('pinyin', 'guideru'), ('bopomofo', '; ')], [('pinyin', 'guideru'), ('cangjie', '; ')], [('pinyin', 'guideru;'), ('english', ' ')]]
+Output_Len: 9
+
+Input: marijuanafu/ tjp 
+Label: [('english', 'marijuana'), ('bopomofo', 'fu/ tjp ')]
+Output: [[('pinyin', 'marijua'), ('cangjie', 'nafu/ tjp ')], [('pinyin', 'marijuan'), ('cangjie', 'afu/ tjp ')], [('pinyin', 'marijuana'), ('bopomofo', 'fu/ tjp ')], [('english', 'marijuanaf'), ('bopomofo', 'u/ tjp ')], [('pinyin', 'marijuanaf'), ('bopomofo', 'u/ tjp ')], [('english', 'marijuanafu'), ('bopomofo', '/ tjp ')], [('english', 'marijuanafu'), ('cangjie', '/ tjp ')], [('pinyin', 'marijuanafu'), ('bopomofo', '/ tjp ')], [('pinyin', 'marijuanafu'), ('cangjie', '/ tjp ')], [('english', 'marijuanafu/'), ('cangjie', ' tjp ')], [('pinyin', 'marijuanafu/'), ('cangjie', ' tjp ')], [('pinyin', 'marijuanafu/'), ('english', ' tjp ')], [('english', 'marijuanafu/ t'), ('bopomofo', 'jp ')], [('english', 'marijuanafu/ t'), ('cangjie', 'jp ')], [('english', 'marijuanafu/ tj'), ('cangjie', 'p ')]]
+Output_Len: 15
+
+Input: pmnlbm 
+Label: [('english', 'pm'), ('cangjie', 'nlbm ')]
+Output: [[('english', 'p'), ('cangjie', 'mnlbm ')], [('cangjie', 'pmnlbm'), ('english', ' ')]]
+Output_Len: 2
+
+Input: rm6up
+Label: [('bopomofo', 'rm6'), ('english', 'up')]
+Output: [[('english', 'r'), ('bopomofo', 'm6up')], [('bopomofo', 'rm6u'), ('english', 'p')]]
+Output_Len: 2
+
+Input: 1u3rul4continuing
+Label: [('bopomofo', '1u3rul4'), ('english', 'continuing')]
+Output: [[('bopomofo', '1u3'), ('english', 'rul4continuing')], [('bopomofo', '1u3r'), ('english', 'ul4continuing')], [('bopomofo', '1u3rul'), ('pinyin', '4continuing')], [('bopomofo', '1u3rul4'), ('pinyin', 'continuing')], [('bopomofo', '1u3rul4c'), ('english', 'ontinuing')], [('bopomofo', '1u3rul4c'), ('pinyin', 'ontinuing')], [('bopomofo', '1u3rul4co'), ('pinyin', 'ntinuing')], [('bopomofo', '1u3rul4con'), ('pinyin', 'tinuing')], [('bopomofo', '1u3rul4cont'), ('english', 'inuing')], [('bopomofo', '1u3rul4cont'), ('pinyin', 'inuing')], [('bopomofo', '1u3rul4conti'), ('pinyin', 'nuing')], [('bopomofo', '1u3rul4contin'), ('pinyin', 'uing')], [('english', '1u3rul4contin'), ('pinyin', 'uing')], [('bopomofo', '1u3rul4continu'), ('cangjie', 'ing')], [('bopomofo', '1u3rul4continu'), ('english', 'ing')], [('bopomofo', '1u3rul4continu'), ('pinyin', 'ing')], [('bopomofo', '1u3rul4continui'), ('cangjie', 'ng')], [('bopomofo', '1u3rul4continui'), ('pinyin', 'ng')], [('english', '1u3rul4continui'), ('cangjie', 'ng')], [('english', '1u3rul4continui'), ('pinyin', 'ng')]]
+Output_Len: 20
+
+Input: findinghqi hbbuu hoami 
+Label: [('english', 'finding'), ('cangjie', 'hqi hbbuu hoami ')]
+Output: [[('english', 'fi'), ('cangjie', 'ndinghqi hbbuu hoami ')], [('pinyin', 'fi'), ('cangjie', 'ndinghqi hbbuu hoami ')], [('english', 'find'), ('cangjie', 'inghqi hbbuu hoami ')], [('pinyin', 'find'), ('cangjie', 'inghqi hbbuu hoami ')], [('pinyin', 'find'), ('english', 'inghqi hbbuu hoami ')], [('pinyin', 'findi'), ('cangjie', 'nghqi hbbuu hoami ')], [('english', 'findin'), ('cangjie', 'ghqi hbbuu hoami ')], [('pinyin', 'findin'), ('cangjie', 'ghqi hbbuu hoami ')], [('pinyin', 'finding'), ('cangjie', 'hqi hbbuu hoami ')], [('pinyin', 'findingh'), ('cangjie', 'qi hbbuu hoami ')], [('pinyin', 'findinghq'), ('cangjie', 'i hbbuu hoami ')], [('pinyin', 'findinghqi'), ('english', ' hbbuu hoami ')], [('pinyin', 'findinghqi '), ('cangjie', 'hbbuu hoami ')], [('pinyin', 'findinghqi h'), ('cangjie', 'bbuu hoami ')], [('pinyin', 'findinghqi hb'), ('cangjie', 'buu hoami ')], [('pinyin', 'findinghqi hbb'), ('cangjie', 'uu hoami ')]]
+Output_Len: 16
+
+Input: y942jo4zj4damn
+Label: [('bopomofo', 'y942jo4zj4'), ('english', 'damn')]
+Output: [[('english', 'y'), ('bopomofo', '942jo4zj4damn')], [('bopomofo', 'y942jo4zj4'), ('pinyin', 'damn')], [('bopomofo', 'y942jo4zj4da'), ('english', 'mn')], [('bopomofo', 'y942jo4zj4da'), ('pinyin', 'mn')], [('bopomofo', 'y942jo4zj4dam'), ('english', 'n')]]
+Output_Len: 5
+
+Input: quailyiyishang
+Label: [('english', 'quail'), ('pinyin', 'yiyishang')]
+Output: [[('english', 'q'), ('pinyin', 'uailyiyishang')], [('pinyin', 'qu'), ('english', 'ailyiyishang')], [('pinyin', 'qua'), ('english', 'ilyiyishang')], [('pinyin', 'quailyiy'), ('english', 'ishang')], [('pinyin', 'quailyiyish'), ('english', 'ang')], [('english', 'quailyiyisha'), ('cangjie', 'ng')], [('english', 'quailyiyisha'), ('pinyin', 'ng')], [('pinyin', 'quailyiyisha'), ('cangjie', 'ng')], [('pinyin', 'quailyiyishan'), ('english', 'g')]]
+Output_Len: 9
+
+Input: you have183dj94
+Label: [('english', 'you have'), ('bopomofo', '183dj94')]
+Output: [[('pinyin', 'you'), ('english', ' have183dj94')], [('cangjie', 'you '), ('english', 'have183dj94')], [('cangjie', 'you h'), ('bopomofo', 'ave183dj94')], [('cangjie', 'you ha'), ('bopomofo', 've183dj94')], [('cangjie', 'you hav'), ('bopomofo', 'e183dj94')], [('english', 'you have183d'), ('bopomofo', 'j94')], [('english', 'you have183dj'), ('bopomofo', '94')]]
+Output_Len: 7
+
+Input: weizhongu dk 
+Label: [('pinyin', 'weizhong'), ('bopomofo', 'u dk ')]
+Output: [[('english', 'we'), ('cangjie', 'izhongu dk ')], [('pinyin', 'we'), ('cangjie', 'izhongu dk ')], [('english', 'weiz'), ('cangjie', 'hongu dk ')], [('pinyin', 'weiz'), ('cangjie', 'hongu dk ')], [('pinyin', 'weizh'), ('cangjie', 'ongu dk ')], [('pinyin', 'weizho'), ('cangjie', 'ngu dk ')], [('pinyin', 'weizhon'), ('cangjie', 'gu dk ')], [('pinyin', 'weizhong'), ('cangjie', 'u dk ')], [('pinyin', 'weizhongu'), ('cangjie', ' dk ')], [('pinyin', 'weizhongu'), ('english', ' dk ')], [('pinyin', 'weizhongu '), ('bopomofo', 'dk ')], [('pinyin', 'weizhongu '), ('cangjie', 'dk ')], [('pinyin', 'weizhongu d'), ('cangjie', 'k ')], [('pinyin', 'weizhongu dk'), ('english', ' ')]]
+Output_Len: 14
+
+Input: zhimuddy
+Label: [('pinyin', 'zhi'), ('english', 'muddy')]
+Output: [[('english', 'z'), ('pinyin', 'himuddy')], [('pinyin', 'z'), ('english', 'himuddy')], [('pinyin', 'zh'), ('cangjie', 'imuddy')], [('pinyin', 'zh'), ('english', 'imuddy')], [('pinyin', 'zhim'), ('cangjie', 'uddy')], [('pinyin', 'zhimu'), ('cangjie', 'ddy')], [('pinyin', 'zhimudd'), ('english', 'y')]]
+Output_Len: 7
+
+Input: amake landfall Did
+Label: [('pinyin', 'a'), ('english', 'make landfall Did')]
+Output: [[('cangjie', 'amak'), ('english', 'e landfall Did')], [('cangjie', 'amake '), ('english', 'landfall Did')], [('cangjie', 'amake l'), ('english', 'andfall Did')], [('cangjie', 'amake la'), ('english', 'ndfall Did')], [('english', 'amake la'), ('cangjie', 'ndfall Did')], [('cangjie', 'amake lan'), ('english', 'dfall Did')], [('english', 'amake lan'), ('cangjie', 'dfall Did')], [('cangjie', 'amake land'), ('english', 'fall Did')], [('cangjie', 'amake landf'), ('english', 'all Did')], [('english', 'amake landf'), ('cangjie', 'all Did')], [('english', 'amake landfa'), ('cangjie', 'll Did')], [('english', 'amake landfal'), ('cangjie', 'l Did')], [('cangjie', 'amake landfall '), ('english', 'Did')], [('cangjie', 'amake landfall D'), ('pinyin', 'id')], [('english', 'amake landfall D'), ('pinyin', 'id')], [('cangjie', 'amake landfall Di'), ('english', 'd')], [('cangjie', 'amake landfall Di'), ('pinyin', 'd')], [('english', 'amake landfall Di'), ('pinyin', 'd')]]
+Output_Len: 18
+
+Input: shizhupm
+Label: [('pinyin', 'shizhu'), ('english', 'pm')]
+Output: [[('english', 's'), ('pinyin', 'hizhupm')], [('english', 'sh'), ('pinyin', 'izhupm')], [('english', 'shi'), ('pinyin', 'zhupm')], [('pinyin', 'shiz'), ('cangjie', 'hupm')], [('pinyin', 'shizhup'), ('english', 'm')]]
+Output_Len: 5
+
+Input: knowwan
+Label: [('english', 'know'), ('pinyin', 'wan')]
+Output: [[('english', 'k'), ('pinyin', 'nowwan')], [('pinyin', 'kn'), ('cangjie', 'owwan')], [('pinyin', 'kn'), ('english', 'owwan')], [('pinyin', 'kno'), ('english', 'wwan')], [('cangjie', 'know'), ('english', 'wan')], [('cangjie', 'know'), ('pinyin', 'wan')], [('pinyin', 'know'), ('english', 'wan')], [('cangjie', 'knoww'), ('english', 'an')], [('cangjie', 'knoww'), ('pinyin', 'an')], [('pinyin', 'knoww'), ('english', 'an')], [('pinyin', 'knowwa'), ('english', 'n')]]
+Output_Len: 11
+
+Input: xuefaskiff
+Label: [('pinyin', 'xuefa'), ('english', 'skiff')]
+Output: [[('pinyin', 'xu'), ('english', 'efaskiff')], [('pinyin', 'xue'), ('english', 'faskiff')], [('pinyin', 'xuef'), ('cangjie', 'askiff')], [('pinyin', 'xuef'), ('english', 'askiff')], [('pinyin', 'xuefa'), ('cangjie', 'skiff')], [('pinyin', 'xuefas'), ('cangjie', 'kiff')], [('pinyin', 'xuefask'), ('cangjie', 'iff')], [('pinyin', 'xuefask'), ('english', 'iff')], [('pinyin', 'xuefaski'), ('english', 'ff')], [('pinyin', 'xuefaskif'), ('english', 'f')]]
+Output_Len: 10

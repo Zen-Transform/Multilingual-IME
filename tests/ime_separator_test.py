@@ -32,25 +32,18 @@ TEST_FILE_PATH = ".\\tests\\test_data\\labeld_mix_ime_{}{}.txt".format( \
     "r" if ERROR_TYPE == "random" else ("8a" if ERROR_TYPE == "8adjacency" else "e"), \
     str(ERROR_RATE).replace(".", "-"),\
     )
-TEST_RESULT_FILE_PATH = f".\\reports\\ime_separator_test_result_{TIMESTAMP}.txt"
+SEPARATOR_TEST_RESULT_FILE_PATH = f".\\reports\\ime_separator_test_result_{TIMESTAMP}.txt"
+SEPARATOR_CONVERTOR_TEST_RESULT_FILE_PATH = f".\\reports\\ime_separator_converter_test_result_{TIMESTAMP}.txt"
 
+def process_line(mix_ime_group: list[(str, str)]) -> str:
+    mix_ime_keystrokes, answer_group, plain_texts = "", [], ""
+    for ime_type, text in mix_ime_group:
+        keystroke = KeyStrokeConverter.convert(text, convert_type=ime_type)
+        mix_ime_keystrokes += TypoGenerater.generate(keystroke, error_type=ERROR_TYPE, error_rate=ERROR_RATE)
+        answer_group.append(f"(\"{ime_type}\", \"{keystroke}\")")
+        plain_texts += text
 
-def process_line(chinese_line: str, english_line: str, k_num: int):
-    sampled_languages = random.sample(CONVERT_LANGUAGES, k=k_num)
-    mix_ime_keystrokes, line_answer = "", ""
-    for language in sampled_languages:
-        keystroke = ""
-        if language == "english":
-            keystroke += KeyStrokeConverter.convert(english_line, convert_type=language)
-        else:
-            keystroke += KeyStrokeConverter.convert(chinese_line, convert_type=language)
-        
-        keystroke = TypoGenerater.generate(keystroke, error_type="random", error_rate=ERROR_RATE)
-
-        mix_ime_keystrokes += keystroke
-        line_answer += f"(\"{language}\", \"{keystroke}\")"
-
-    return mix_ime_keystrokes + DATA_AND_LABEL_SPLITTER + line_answer
+    return mix_ime_keystrokes + DATA_AND_LABEL_SPLITTER + ",".join(answer_group) + DATA_AND_LABEL_SPLITTER + plain_texts
 
 
 def mutiprocess_test(separator: IMESeparator, mix_ime_keystrokes: str, separate_answer: list) -> dict:
@@ -79,7 +72,7 @@ if __name__ == "__main__":
             english_lines = [line for line in english_lines if len(line) > 0]
         
         MAX_DATA_LINE = min(len(chinese_lines), len(english_lines), USER_DEFINE_MAX_DATA_LINE)
-        chinese_lines = random.sample(chinese_lines, MAX_DATA_LINE)
+        chinese_lines = random.sample(chinese_lines, MAX_DATA_LINE*3)
         english_lines = random.sample(english_lines, MAX_DATA_LINE)
         print(f"Generating {MAX_DATA_LINE} lines of mixed language data")
 
@@ -90,10 +83,11 @@ if __name__ == "__main__":
         assert len(num_of_mix_ime_list) == MAX_DATA_LINE, "error in num_of_mix_ime_list length"
         
         config = {
-            "total_lines": MAX_DATA_LINE,
+            "Data_format": "mix_ime_keystrokes" + DATA_AND_LABEL_SPLITTER + "separate_answer" + DATA_AND_LABEL_SPLITTER + "plain_text",
+            "Total_lines": MAX_DATA_LINE,
             "NUM_OF_MIX_IME": NUM_OF_MIX_IME,
             "ERROR_RATE": ERROR_RATE,
-            "mix_count": {
+            "Mix_count": {
                 "mix_1": num_of_mix_ime_list.count(1),
                 "mix_2": num_of_mix_ime_list.count(2)
             }
@@ -105,77 +99,86 @@ if __name__ == "__main__":
                     pbar.update()
 
                 reuslt = []
-                for chinese_line, english_line, num_of_mix_ime in zip(chinese_lines, english_lines, num_of_mix_ime_list):
-                    reuslt.append(pool.apply_async(process_line, args=(chinese_line, english_line, num_of_mix_ime), callback=updete_pbar))
+                for num_of_mix_ime in num_of_mix_ime_list:
+                    sampled_languages = random.sample(CONVERT_LANGUAGES, k=num_of_mix_ime)
+                    mix_ime_group = []
+                    for language in sampled_languages:
+                        if language == "english":
+                            mix_ime_group.append((language, english_lines.pop(0)))
+                        else:
+                            mix_ime_group.append((language, chinese_lines.pop(0)))
+                            
+                    reuslt.append(pool.apply_async(process_line, args=(mix_ime_group,), callback=updete_pbar))
 
                 reuslt = [res.get() for res in reuslt]
                 reuslt.insert(0, str(config))
                 with open(TEST_FILE_PATH, "w", encoding="utf-8") as f:
                     f.write("\n".join(reuslt))
 
-
-    if os.path.exists(TEST_FILE_PATH):
-        if input(f"File {TEST_FILE_PATH} already exists, do you want to overwrite it? (y/n): ") == "y":
-            os.remove(TEST_FILE_PATH)
+    def test_separator():
+        if os.path.exists(TEST_FILE_PATH):
+            if input(f"File {TEST_FILE_PATH} already exists, do you want to overwrite it? (y/n): ") == "y":
+                os.remove(TEST_FILE_PATH)
+                generate_mix_ime_test_data()
+        else:
             generate_mix_ime_test_data()
-    else:
-        generate_mix_ime_test_data()
 
-    assert os.path.exists(TEST_FILE_PATH), f"{TEST_FILE_PATH} not found"
+        assert os.path.exists(TEST_FILE_PATH), f"{TEST_FILE_PATH} not found"
 
 
-    # Testing mix ime
-    separator = IMESeparator(use_cuda=False)  # use_cuda=False for multi-processing test
+        # Testing separator on mixed ime data
+        separator = IMESeparator(use_cuda=False)  # use_cuda=False for multi-processing test
 
+        wrong_answer_logs = []
+        with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            test_config, test_lines = eval(lines[0]), lines[1:]
+            test_lines = random.sample(test_lines, min(len(test_lines), USER_DEFINE_MAX_TEST_LINE))
+        try:
+            results = []
+            for line in tqdm(test_lines):
+                mix_ime_keystrokes, line_answer = line.strip().split(DATA_AND_LABEL_SPLITTER)[:2]
+                label_answer = eval("["+line_answer.replace(")(", "), (")+"]")
+                separat_result = separator.separate(mix_ime_keystrokes)
+                results.append(mutiprocess_test(separator, mix_ime_keystrokes, label_answer))
 
-    wrong_answer_logs = []
-    with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-        test_config, test_lines = eval(lines[0]), lines[1:]
-        test_lines = random.sample(test_lines, min(len(test_lines), USER_DEFINE_MAX_TEST_LINE))
-    try:
-        results = []
-        for line in tqdm(test_lines):
-            mix_ime_keystrokes, line_answer = line.strip().split(DATA_AND_LABEL_SPLITTER)
-            label_answer = eval("["+line_answer.replace(")(", "), (")+"]")
-            separat_result = separator.separate(mix_ime_keystrokes)
-            results.append(mutiprocess_test(separator, mix_ime_keystrokes, label_answer))
+            total_test_example = len(results)
+            correct_count = 0
+            prediction_len_count = 0
+            prediction_len_count_correct = 0
+            len_score = 0
+            for result in results:
+                if result["Correct"]:
+                    correct_count += 1
+                    prediction_len_count_correct += result["Output_Len"]
+                else:
+                    wrong_answer_logs.append(result["Test_log"])
+                
+                numerater = 1 if result["Correct"] else 0
+                denumerator = result["Output_Len"]
+                len_score += numerater / denumerator if denumerator > 0 else 0
+                prediction_len_count += denumerator
 
-        total_test_example = len(results)
-        correct_count = 0
-        prediction_len_count = 0
-        prediction_len_count_correct = 0
-        len_score = 0
-        for result in results:
-            if result["Correct"]:
-                correct_count += 1
-                prediction_len_count_correct += result["Output_Len"]
-            else:
-                wrong_answer_logs.append(result["Test_log"])
-            
-            numerater = 1 if result["Correct"] else 0
-            denumerator = result["Output_Len"]
-            len_score += numerater / denumerator if denumerator > 0 else 0
-            prediction_len_count += denumerator
+        except KeyboardInterrupt:
+            print("User interrupt")
+        
+        finally: 
+            print("============= Test Result =============")       
+            print(f"{test_config}")
+            print(f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}")
+            print(f"Len Score: {len_score/total_test_example}")
+            with open(SEPARATOR_TEST_RESULT_FILE_PATH, "w", encoding="utf-8") as f:
+                f.write(
+                    f"============= Test Result =============\n" + \
+                    f"{test_config}\n" + \
+                    f"Test Date: {TIMESTAMP}\n" + \
+                    f"Total Test Sample: {total_test_example}\n" + \
+                    f"Correct: {correct_count}\n" + \
+                    f"Total Predictions: {prediction_len_count}\n" + \
+                    f"Average Output Len: {prediction_len_count/total_test_example}\n" + \
+                    f"Average Correct Output Len: {prediction_len_count_correct/total_test_example}\n" + \
+                    f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n" + \
+                    f"Len Score: {len_score/total_test_example}\n\n" + \
+                    f"\n".join(wrong_answer_logs))
 
-    except KeyboardInterrupt:
-        print("User interrupt")
-    
-    finally: 
-        print("============= Test Result =============")       
-        print(f"{test_config}")
-        print(f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}")
-        print(f"Len Score: {len_score/total_test_example}")
-        with open(TEST_RESULT_FILE_PATH, "w", encoding="utf-8") as f:
-            f.write(
-                f"============= Test Result =============\n" + \
-                f"{test_config}\n" + \
-                f"Test Date: {TIMESTAMP}\n" + \
-                f"Total Test Sample: {total_test_example}\n" + \
-                f"Correct: {correct_count}\n" + \
-                f"Total Predictions: {prediction_len_count}\n" + \
-                f"Average Output Len: {prediction_len_count/total_test_example}\n" + \
-                f"Average Correct Output Len: {prediction_len_count_correct/total_test_example}\n" + \
-                f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n" + \
-                f"Len Score: {len_score/total_test_example}\n\n" + \
-                f"\n".join(wrong_answer_logs))
+    test_separator()
