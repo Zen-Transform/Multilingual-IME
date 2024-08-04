@@ -5,6 +5,7 @@ class CandidateWord():
         self.word_frequency = word_frequency
         self.user_key = None
         self.distance = None
+        self.method = None
     
     def to_dict(self):
         return {
@@ -14,3 +15,7 @@ class CandidateWord():
             "user_key": self.user_key,
             "distance": self.distance
         }
+
+    def set_method(self, method:str):
+        self.method = method
+        return self
