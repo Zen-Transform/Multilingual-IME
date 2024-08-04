@@ -1,94 +1,103 @@
-
-from typing import Union
-from sentence_transformers import SentenceTransformer
-from sentence_transformers.util import cos_sim
-import time
+import re
 
 from multilingual_ime.ime_separator import IMESeparator
-from multilingual_ime.ime_converter import IMEConverter
-from multilingual_ime.ime_converter import EnglishIMEConverter
-from SVMClassification import (
-    custom_tokenizer_bopomofo,
-    custom_tokenizer_cangjie,
-    custom_tokenizer_pinyin,
-)
+from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter
+from multilingual_ime.candidate import CandidateWord
 
+
+def custom_tokenizer_bopomofo(text):
+    if not text:
+        return []
+    pattern = re.compile(r"(?<=3|4|6|7| )")
+    tokens = pattern.split(text)
+    tokens = [token for token in tokens if token]
+    if tokens[-1].find("§") != -1:
+        tokens.pop()
+
+    return tokens
+
+
+def custom_tokenizer_cangjie(text):
+    if not text:
+        return []
+    pattern = re.compile(r"(?<=[ ])")
+    tokens = pattern.split(text)
+    tokens = [token for token in tokens if token]
+    if tokens[-1].find("§") != -1:
+        tokens.pop()
+    return tokens
+
+
+def custom_tokenizer_pinyin(text):
+    if not text:
+        return []
+    tokens = []
+    pattern = re.compile(
+        r"(?:[bpmfdtnlgkhjqxzcsyw]|[zcs]h)?(?:[aeiouv]?ng|[aeiou](?![aeiou])|[aeiou]?[aeiou]?r|[aeiou]?[aeiou]?[aeiou])"
+    )
+    matches = re.findall(pattern, text)
+    tokens.extend(matches)
+    if tokens and tokens[-1].find("§") != -1:
+        tokens.pop()
+    return tokens
 
 class IMEHandler():
     def __init__(self) -> None:
-        self._bopomofo_converter = IMEConverter(".\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json")
-        self._cangjie_converter = IMEConverter(".\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json")
-        self._pinyin_converter = IMEConverter(".\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json")
-        self._english_converter = EnglishIMEConverter(".\\keystroke_mapping_dictionary\\english_dict_with_frequency.json")
-        self._separator = IMESeparator()
-        self._language_model = None
-        self._load_language_model("all-MiniLM-L6-v2")
+        self._bopomofo_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json")
+        self._cangjie_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json")
+        self._pinyin_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json")
+        self._english_converter = EnglishIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json")
+        self._separator = IMESeparator(use_cuda=False)
 
-    def _load_language_model(self, model_name: str) -> SentenceTransformer:
-        start_time = time.time()
-        print(f"Loading model...")
-        self._language_model = SentenceTransformer(model_name)
-        print("Model loaded successfully!", time.time() - start_time, "seconds")
-
-    def get_candidate_words(self, keystroke: str, prev_context: str = "") -> list[dict[str, Union[int, list[dict[str, Union[str, int]]]]]]:
+    def get_candidate_words(self, keystroke: str, prev_context: str = "") -> list[list[CandidateWord]]:
         separate_possibilities = self._separator.separate(keystroke)
-        output = []
+        sentence_possibilities = []
         for separate_way in separate_possibilities:
-            logical_sentence = []
-            for method, keystroke in separate_way:
-                if method == "bopomofo":
-                    tokens = custom_tokenizer_bopomofo(keystroke)
-                    for token in tokens:
-                        logical_sentence.append([{**g, "method": "bopomofo"} for g in self._bopomofo_converter.get_candidates(token, 1, 2)])
-                elif method == "cangjie":
-                    tokens = custom_tokenizer_cangjie(keystroke)
-                    for token in tokens:
-                        logical_sentence.append([{**g, "method": "cangjie"} for g in self._cangjie_converter.get_candidates(token, 1, 2)])
-                elif method == "pinyin":
-                    tokens = custom_tokenizer_pinyin(keystroke)
-                    for token in tokens:
-                        logical_sentence.append([{**g, "method": "pinyin"} for g in self._pinyin_converter.get_candidates(token, 1, 2)])
-                elif method == "english":
-                    tokens = keystroke.split(" ")
-                    for token in tokens:
-                        logical_sentence.append([{**g, "method": "english"} for g in self._english_converter.get_candidates(token, 1, 2)])
-                else:
-                    raise ValueError("Invalid method: " + method)
-                
-            logical_sentence = [g for g in logical_sentence if len(g) > 0]
-            # logical_sentence.sort(key=lambda x: x[0]["distance"])  # bad
-            # print("logical_sentence", logical_sentence)
-            sum_distance = sum([g[0]["distance"] for g in logical_sentence])
+            sentence_possibilities.append(self._construct_sentence(separate_way))
+        assert len(separate_possibilities) == len(sentence_possibilities), "Length of separate_possibilities and sentence_possibilities should be the same"
+
+        sentence_possibilities = sorted(sentence_possibilities, key=lambda x: x["total_distance"])
+        return sentence_possibilities
+
+    def _construct_sentence(self, separate_way) -> list[list[CandidateWord]]:
+        logical_sentence = []
+        for method, keystroke in separate_way:
+            if method == "bopomofo":
+                tokens = custom_tokenizer_bopomofo(keystroke)
+                for token in tokens:
+                    logical_sentence.append([g.set_method("bopomofo") for g in self._bopomofo_converter.get_candidates(token)])
+            elif method == "cangjie":
+                tokens = custom_tokenizer_cangjie(keystroke)
+                for token in tokens:
+                    logical_sentence.append([g.set_method("cangjie") for g in self._cangjie_converter.get_candidates(token)])
+            elif method == "pinyin":
+                tokens = custom_tokenizer_pinyin(keystroke)
+                for token in tokens:
+                    logical_sentence.append([g.set_method("pinyin") for g in self._pinyin_converter.get_candidates(token)])
+            elif method == "english":
+                tokens = keystroke.split(" ")
+                for token in tokens:
+                    logical_sentence.append([g.set_method("english") for g in self._english_converter.get_candidates(token)])
+            else:
+                raise ValueError("Invalid method: " + method)
             
-            output.append({
-                "total_distance": sum_distance,
-                "sentence": logical_sentence
-                })
-        
-        output = sorted(output, key=lambda x: x["total_distance"])
-        min_total_distance = output[0]["total_distance"]
-        output = [g for g in output if g["total_distance"] <= min_total_distance]
+        logical_sentence = [logical_word for logical_word in logical_sentence if len(logical_word) > 0]
+        sum_distance = sum([logical_word[0].distance for logical_word in logical_sentence])
 
-        if len(prev_context) > 0:
-            encoded_context = self._language_model.encode(prev_context)
-
-            for possible_sentence_group in output:
-                for logic_token in possible_sentence_group["sentence"]:
-                    for possible_word in logic_token:
-                        possible_word["similarity_score"] = float(cos_sim(self._language_model.encode(possible_word["word"]), encoded_context).item())  # bad
-                    logic_token.sort(key=lambda x: x["similarity_score"], reverse=True)
-        return output
-
+        return {
+            "total_distance": sum_distance,
+            "sentence": logical_sentence
+        }
 
 if __name__ == "__main__":
     my_IMEHandler = IMEHandler()
-    while True:
-        context = input("Input Context: ")
-        user_keystroke = input("Input Keystroke: ")
-        result = my_IMEHandler.get_candidate_words(user_keystroke, prev_context=context)
-        # print(result)
-        
-        with open("output.json", "w", encoding="utf-8") as f:
-            f.write(str(result))
-        print("===")
-
+    context = ""
+    user_keystroke = "su3cl3good night"
+    result = my_IMEHandler.get_candidate_words(user_keystroke, context)
+    for i, my_dict in enumerate(result, 1):
+        print(f"Result {i}:")
+        print(f"Total distance: {my_dict['total_distance']}")
+        sentence = my_dict["sentence"]
+        for candidate_words in sentence:
+            print(" - "+ " ".join([candidate_word.word for candidate_word in candidate_words]))
+        print()
