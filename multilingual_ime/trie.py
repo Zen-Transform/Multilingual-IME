@@ -39,7 +39,7 @@ class Trie():
             node = node.children[char]
         return node.value
 
-    def findClosestMatches(self, query: str, num_of_result: int) -> list:
+    def findClosestMatches(self, query: str) -> list:
         if query in self.keyStrokeCatch:
             return self.keyStrokeCatch[query]
 
@@ -88,7 +88,7 @@ class Trie():
         traverse(self.root, "")
         minHeap.sort(key=lambda x: x[0])
 
-        result = [{"distance": res[0], "keySoFar": res[1], "value": res[2]} for res in minHeap[:num_of_result]]
+        result = [{"distance": res[0], "keySoFar": res[1], "value": res[2]} for res in minHeap]
         self.keyStrokeCatch[query] = result
 
         return result
