@@ -1,8 +1,10 @@
 import re
+import time
 
 from multilingual_ime.ime_separator import IMESeparator
 from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter
 from multilingual_ime.candidate import CandidateWord
+from multilingual_ime.core.custom_decorators import not_implemented
 
 
 def custom_tokenizer_bopomofo(text):
@@ -58,21 +60,21 @@ class IMEHandler:
         )
         self._separator = IMESeparator(use_cuda=False)
 
-    def get_candidate_words(
+    def _get_candidate_words(
         self, keystroke: str, prev_context: str = ""
     ) -> list[list[CandidateWord]]:
         separate_possibilities = self._separator.separate(keystroke)
-        sentence_possibilities = []
+        candidate_sentences = []
         for separate_way in separate_possibilities:
-            sentence_possibilities.append(self._construct_sentence(separate_way))
+            candidate_sentences.append(self._construct_sentence(separate_way))
         assert len(separate_possibilities) == len(
-            sentence_possibilities
-        ), "Length of separate_possibilities and sentence_possibilities should be the same"
+            candidate_sentences
+        ), "Length of separate_possibilities and candidate_sentences should be the same"
 
-        sentence_possibilities = sorted(
-            sentence_possibilities, key=lambda x: x["total_distance"]
+        candidate_sentences = sorted(
+            candidate_sentences, key=lambda x: x["total_distance"]
         )
-        return sentence_possibilities
+        return candidate_sentences
 
     def _construct_sentence(self, separate_way) -> list[list[CandidateWord]]:
         logical_sentence = []
@@ -125,19 +127,36 @@ class IMEHandler:
 
         return {"total_distance": sum_distance, "sentence": logical_sentence}
 
+    def _construct_sentence_to_words(self, logical_sentence) -> list[list[str]]:
+        sentences = []
+        for logical_sentence in logical_sentence:
+            sentence = [candidate_word.word for candidate_word in logical_sentence]
+            sentences.append(sentence)
+        return sentences
+
+    @not_implemented
+    def _greedy_phrase_search(self, logical_sentence, prev_context):
+        pass
+
+    def get_candidate(self, keystroke: str, prev_context: str = "") -> list[str]:
+        result = self._get_candidate_words(keystroke, prev_context)
+        best_logical_sentence = result[0]["sentence"]
+        return self._construct_sentence_to_words(best_logical_sentence)
+
 
 if __name__ == "__main__":
-    my_IMEHandler = IMEHandler()
     context = ""
-    user_keystroke = "su3cl3good night"
-    result = my_IMEHandler.get_candidate_words(user_keystroke, context)
-    for i, my_dict in enumerate(result, 1):
-        print(f"Result {i}:")
-        print(f"Total distance: {my_dict['total_distance']}")
-        sentence = my_dict["sentence"]
-        for candidate_words in sentence:
-            print(
-                " - "
-                + " ".join([candidate_word.word for candidate_word in candidate_words])
-            )
-        print()
+    user_keystroke = "t g3bjo4dk4apple wathc"
+    start_time = time.time()
+    my_IMEHandler = IMEHandler()
+    print("Initialization time: ", time.time() - start_time)
+    avg_time, num_of_test = 0, 0
+    while True:
+        user_keystroke = input("Enter keystroke: ")
+        num_of_test += 1
+        start_time = time.time()
+        result = my_IMEHandler.get_candidate(user_keystroke, context)
+        end_time = time.time()
+        avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
+        print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
+        print(result)
