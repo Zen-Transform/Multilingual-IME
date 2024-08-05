@@ -31,7 +31,7 @@ class IMESeparator:
             (self._pinyin_detector, "pinyin"),
         ]
 
-        for index in range(1, len(input_stroke)):
+        for index in range(0, len(input_stroke)):
             former_keystrokes = input_stroke[:index]
             latter_keystrokes = input_stroke[index:]
             for former_detector, former_language in detector_groups:
