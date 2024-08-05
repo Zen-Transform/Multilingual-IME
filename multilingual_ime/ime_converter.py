@@ -52,7 +52,7 @@ class EnglishIMEConverter(IMEConverter):
         self.trie = Trie(json.load(open(data_dict_path, "r", encoding="utf-8")))
 
     def get_candidates(self, key_stroke_query: str) -> list[CandidateWord]:
-        key_stroke_query_lower_case = key_stroke_query.lower()
+        key_stroke_query_lower_case = key_stroke_query.lower()  # english specail modification: remove case sensitivity
 
         candidates = self.trie.findClosestMatches(key_stroke_query_lower_case)
         min_distance = min([candidate["distance"] for candidate in candidates])
@@ -68,9 +68,12 @@ class EnglishIMEConverter(IMEConverter):
         word_candidates = []
         for candidate in candidates:
             for candidate_word in candidate["value"]:
-                candidate_word.distance = candidate["distance"]
-                candidate_word.user_key = key_stroke_query
-                word_candidates.append(candidate_word)
+                new_word = CandidateWord(candidate_word.word, key_stroke_query, candidate_word.word_frequency)
+                new_word.distance = candidate["distance"]
+                new_word.user_key = key_stroke_query
+                if new_word.word.lower() == key_stroke_query_lower_case:
+                    new_word.word = key_stroke_query
+                word_candidates.append(new_word)
         return word_candidates
 
 
