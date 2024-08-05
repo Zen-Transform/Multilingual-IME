@@ -1,12 +1,13 @@
 from .candidate import CandidateWord
 
 
-class TrieNode():
+class TrieNode:
     def __init__(self):
         self.children = {}
         self.value = None
 
-class Trie():
+
+class Trie:
     def __init__(self, keystroke_mapping_dict: dict = None):
         self.root = TrieNode()
         self.keyStrokeCatch = {}
@@ -15,23 +16,31 @@ class Trie():
             for key, value in keystroke_mapping_dict.items():
                 self.insert(key, value)
 
-    def insert(self, key:str, value:list)->None:
+    def insert(self, key: str, value: list) -> None:
         node = self.root
         for char in key:
             if char not in node.children:
                 node.children[char] = TrieNode()
             node = node.children[char]
-        
+
         if node.value is None:
             node.value = [  # fix: bad code hard to read
-                CandidateWord(word=element[0], keystrokes=key, word_frequency=element[1]) for element in value
-                ]
+                CandidateWord(
+                    word=element[0], keystrokes=key, word_frequency=element[1]
+                )
+                for element in value
+            ]
         else:
-            node.value.extend([
-                CandidateWord(word=element[0], keystrokes=key, word_frequency=element[1]) for element in value
-                ])
+            node.value.extend(
+                [
+                    CandidateWord(
+                        word=element[0], keystrokes=key, word_frequency=element[1]
+                    )
+                    for element in value
+                ]
+            )
 
-    def search(self, key:str) -> list:
+    def search(self, key: str) -> list:
         node = self.root
         for char in key:
             if char not in node.children:
@@ -72,8 +81,8 @@ class Trie():
                     deletions = current_row[j] + 1
                     # substitutions = previous_row[j] + (char1 != char2)
                     if char1 != char2:
-                        if i > 0 and j > 0 and s1[i-1] == char2 and s1[i] == char1:
-                            substitutions = previous_row[j-1]
+                        if i > 0 and j > 0 and s1[i - 1] == char2 and s1[i] == char1:
+                            substitutions = previous_row[j - 1]
                         else:
                             substitutions = previous_row[j] + 1
                     else:
@@ -88,8 +97,9 @@ class Trie():
         traverse(self.root, "")
         minHeap.sort(key=lambda x: x[0])
 
-        result = [{"distance": res[0], "keySoFar": res[1], "value": res[2]} for res in minHeap]
+        result = [
+            {"distance": res[0], "keySoFar": res[1], "value": res[2]} for res in minHeap
+        ]
         self.keyStrokeCatch[query] = result
 
         return result
-    

@@ -158,7 +158,8 @@ if __name__ == "__main__":
             is_pinyin = my_pinyin_detector.predict(input_text)
 
             print(
-                Fore.GREEN + "bopomofo" if is_bopomofo else Fore.RED + "bopomofo", end=" "
+                Fore.GREEN + "bopomofo" if is_bopomofo else Fore.RED + "bopomofo",
+                end=" ",
             )
             print(
                 Fore.GREEN + "cangjie" if is_cangjie else Fore.RED + "cangjie", end=" "
@@ -166,9 +167,7 @@ if __name__ == "__main__":
             print(
                 Fore.GREEN + "english" if is_english else Fore.RED + "english", end=" "
             )
-            print(
-                Fore.GREEN + "pinyin" if is_pinyin else Fore.RED + "pinyin", end=" "  
-            )
+            print(Fore.GREEN + "pinyin" if is_pinyin else Fore.RED + "pinyin", end=" ")
             print(Style.RESET_ALL)
             print()
     except KeyboardInterrupt:

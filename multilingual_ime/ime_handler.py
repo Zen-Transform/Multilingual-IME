@@ -41,22 +41,37 @@ def custom_tokenizer_pinyin(text):
         tokens.pop()
     return tokens
 
-class IMEHandler():
+
+class IMEHandler:
     def __init__(self) -> None:
-        self._bopomofo_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json")
-        self._cangjie_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json")
-        self._pinyin_converter = ChineseIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json")
-        self._english_converter = EnglishIMEConverter(".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json")
+        self._bopomofo_converter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+        )
+        self._cangjie_converter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json"
+        )
+        self._pinyin_converter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json"
+        )
+        self._english_converter = EnglishIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
+        )
         self._separator = IMESeparator(use_cuda=False)
 
-    def get_candidate_words(self, keystroke: str, prev_context: str = "") -> list[list[CandidateWord]]:
+    def get_candidate_words(
+        self, keystroke: str, prev_context: str = ""
+    ) -> list[list[CandidateWord]]:
         separate_possibilities = self._separator.separate(keystroke)
         sentence_possibilities = []
         for separate_way in separate_possibilities:
             sentence_possibilities.append(self._construct_sentence(separate_way))
-        assert len(separate_possibilities) == len(sentence_possibilities), "Length of separate_possibilities and sentence_possibilities should be the same"
+        assert len(separate_possibilities) == len(
+            sentence_possibilities
+        ), "Length of separate_possibilities and sentence_possibilities should be the same"
 
-        sentence_possibilities = sorted(sentence_possibilities, key=lambda x: x["total_distance"])
+        sentence_possibilities = sorted(
+            sentence_possibilities, key=lambda x: x["total_distance"]
+        )
         return sentence_possibilities
 
     def _construct_sentence(self, separate_way) -> list[list[CandidateWord]]:
@@ -65,29 +80,51 @@ class IMEHandler():
             if method == "bopomofo":
                 tokens = custom_tokenizer_bopomofo(keystroke)
                 for token in tokens:
-                    logical_sentence.append([g.set_method("bopomofo") for g in self._bopomofo_converter.get_candidates(token)])
+                    logical_sentence.append(
+                        [
+                            g.set_method("bopomofo")
+                            for g in self._bopomofo_converter.get_candidates(token)
+                        ]
+                    )
             elif method == "cangjie":
                 tokens = custom_tokenizer_cangjie(keystroke)
                 for token in tokens:
-                    logical_sentence.append([g.set_method("cangjie") for g in self._cangjie_converter.get_candidates(token)])
+                    logical_sentence.append(
+                        [
+                            g.set_method("cangjie")
+                            for g in self._cangjie_converter.get_candidates(token)
+                        ]
+                    )
             elif method == "pinyin":
                 tokens = custom_tokenizer_pinyin(keystroke)
                 for token in tokens:
-                    logical_sentence.append([g.set_method("pinyin") for g in self._pinyin_converter.get_candidates(token)])
+                    logical_sentence.append(
+                        [
+                            g.set_method("pinyin")
+                            for g in self._pinyin_converter.get_candidates(token)
+                        ]
+                    )
             elif method == "english":
                 tokens = keystroke.split(" ")
                 for token in tokens:
-                    logical_sentence.append([g.set_method("english") for g in self._english_converter.get_candidates(token)])
+                    logical_sentence.append(
+                        [
+                            g.set_method("english")
+                            for g in self._english_converter.get_candidates(token)
+                        ]
+                    )
             else:
                 raise ValueError("Invalid method: " + method)
-            
-        logical_sentence = [logical_word for logical_word in logical_sentence if len(logical_word) > 0]
-        sum_distance = sum([logical_word[0].distance for logical_word in logical_sentence])
 
-        return {
-            "total_distance": sum_distance,
-            "sentence": logical_sentence
-        }
+        logical_sentence = [
+            logical_word for logical_word in logical_sentence if len(logical_word) > 0
+        ]
+        sum_distance = sum(
+            [logical_word[0].distance for logical_word in logical_sentence]
+        )
+
+        return {"total_distance": sum_distance, "sentence": logical_sentence}
+
 
 if __name__ == "__main__":
     my_IMEHandler = IMEHandler()
@@ -99,5 +136,8 @@ if __name__ == "__main__":
         print(f"Total distance: {my_dict['total_distance']}")
         sentence = my_dict["sentence"]
         for candidate_words in sentence:
-            print(" - "+ " ".join([candidate_word.word for candidate_word in candidate_words]))
+            print(
+                " - "
+                + " ".join([candidate_word.word for candidate_word in candidate_words])
+            )
         print()
