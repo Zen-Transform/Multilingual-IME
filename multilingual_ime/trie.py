@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from .candidate import CandidateWord
 
 
@@ -48,10 +50,8 @@ class Trie:
             node = node.children[char]
         return node.value
 
+    @lru_cache(maxsize=128)
     def findClosestMatches(self, query: str) -> list:
-        if query in self.keyStrokeCatch:
-            return self.keyStrokeCatch[query]
-
         minHeap = []
 
         def dfs(node: TrieNode, keySoFar: str) -> None:
@@ -100,6 +100,5 @@ class Trie:
         result = [
             {"distance": res[0], "keySoFar": res[1], "value": res[2]} for res in minHeap
         ]
-        self.keyStrokeCatch[query] = result
 
         return result
