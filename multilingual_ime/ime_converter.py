@@ -88,5 +88,5 @@ if __name__ == "__main__":
         ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
     )
 
-    for candidate_word in my_english_IMEConverter.get_candidates("APPLE9090909090", 3):
+    for candidate_word in my_english_IMEConverter.get_candidates("APPLE9090909090"):
         print(candidate_word.to_dict())
