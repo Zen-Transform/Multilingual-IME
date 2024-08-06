@@ -76,26 +76,35 @@ class Trie:
         else:
             node.value.extend([input_value])
 
-    def search(self, key: str) -> list:
+    def search(self, query_key: str) -> list:
         node = self.root
-        for char in key:
+        for char in query_key:
             if char not in node.children:
                 return None
             node = node.children[char]
         return node.value
 
-    def dfs_traverse(self, node: TrieNode, query: str, keySoFar: str) -> list:
-        if node.value is not None:
-            distance = modified_levenshtein_distance(query, keySoFar)
-            return [(distance, keySoFar, node.value)]
+    def _dfs_traverse(self, node: TrieNode, query: str, keySoFar: str) -> list:
         min_heap = []
-        for char, child_node in node.children.items():
-            min_heap = list(
-                heapq.merge(
-                    min_heap, self.dfs_traverse(child_node, query, keySoFar + char)
+        if node.children == {}:
+            current_distance = modified_levenshtein_distance(query, keySoFar)
+            heapq.heappush(min_heap, (current_distance, keySoFar))
+            return min_heap
+        else:
+            for char, child_node in node.children.items():
+                min_heap = list(
+                    heapq.merge(
+                        min_heap, self._dfs_traverse(child_node, query, keySoFar + char)
+                    )
                 )
-            )
-        return min_heap
+                if len(min_heap) > 5:
+                    min_heap = min_heap[:5]
+                if len(min_heap) > 0 and min_heap[0][0] == 0:  # found exact match
+                    return min_heap
+            if node.value is not None:
+                current_distance = modified_levenshtein_distance(query, keySoFar)
+                heapq.heappush(min_heap, (current_distance, keySoFar))
+            return min_heap
 
     @lru_cache_with_doc(maxsize=128, typed=False)
     def find_closest_match(self, query: str) -> list[dict]:
@@ -108,13 +117,13 @@ class Trie:
             [dict]: A list of dictionaries containing the distance, keySoFar, and value of the closest match to the query string.
 
         """
-        minHeap = self.dfs_traverse(self.root, query, "")
+        minHeap = self._dfs_traverse(self.root, query, "")
         min_distance_candidate = minHeap[0]
         return [
             {
                 "distance": candidate[0],
                 "keySoFar": candidate[1],
-                "value": candidate[2],
+                "value": self.search(candidate[1]),
             }
             for candidate in minHeap
             if candidate[0] <= min_distance_candidate[0]
@@ -124,7 +133,7 @@ class Trie:
 from .candidate import CandidateWord
 
 if __name__ == "__main__":
-    data_dict_path = ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+    data_dict_path = ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
     keystroke_mapping_dict = json.load(open(data_dict_path, "r", encoding="utf-8"))
     trie = Trie()
     if keystroke_mapping_dict is not None:
@@ -137,5 +146,5 @@ if __name__ == "__main__":
             ]
             for candidate in Candidate_words:
                 trie.insert(key, candidate)
-    result = trie.find_closest_match("c3l")
+    result = trie.find_closest_match("apple")
     print(result)
