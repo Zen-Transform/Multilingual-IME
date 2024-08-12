@@ -144,12 +144,11 @@ class KeyStrokeConverter:
 
     @classmethod
     def _StringToPinyinKey(cls, input_string:str) -> str:
-        PINYIN_result = [pin[0] for pin in pinyin(input_string, style=Style.NORMAL)]
+        PINYIN_result = [pin[0] for pin in pinyin(input_string, style=Style.NORMAL, v_to_u=True)]
 
-
-        # result = [pin if pin[0] in cls.full_width_map.keys() else pin for pin in PINYIN_result]
         keystroke = ""
         for pin in PINYIN_result:
+            pin = pin.replace("ü", "u")  # Replace "ü" with "u"
             if pin[0] in cls.full_width_map.keys():
                 for word in pin:
                     keystroke += cls.full_width_map.get(word, word)
@@ -325,8 +324,18 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    # input_string = "僅頒行政院長陳建仁今\n（16）日出席\n「112年鳳凰獎楷模表揚典禮」，頒獎表揚74名獲獎義消"
-    # convert_type = "cangjie"
-    # print(input_string)
-    # print(KeyStrokeConverter.convert(input_string, convert_type))
+    # main()
+    # input_string = "略"
+    convert_type = "pinyin"
+    words = ['女', 
+            '略',
+            '虐',
+            "率", "律", "慮", "旅", 
+            "綠", "呂", "侶", "屢", "履", 
+            "驢", "濾", "鋁", "櫚", "氯", 
+            "縷", "褸", "閭", "驴", "吕", 
+            "铝", "侣", "屡", "缕", "滤", 
+            "绿"]
+    for input_string in words:
+        print(f"{input_string}:{KeyStrokeConverter.convert(input_string, convert_type)}", end=" ")
+
