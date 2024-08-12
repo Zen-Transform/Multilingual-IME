@@ -117,6 +117,16 @@ class Trie:
             [dict]: A list of dictionaries containing the distance, keySoFar, and value of the closest match to the query string.
 
         """
+        quick_search = self.search(query)
+        if quick_search is not None:
+            return [
+                {
+                    "distance": 0,
+                    "keySoFar": query,
+                    "value": quick_search,
+                }
+            ]
+
         minHeap = self._dfs_traverse(self.root, query, "")
         min_distance_candidate = minHeap[0]
         return [
