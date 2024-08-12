@@ -39,16 +39,16 @@ class IMESeparator:
                     if former_detector.predict(former_keystrokes) \
                         and latter_detector.predict(latter_keystrokes) \
                         and former_detector != latter_detector:
-                        results.append([(former_language, former_keystrokes), (latter_language, latter_keystrokes)])
+                        if former_keystrokes == "":
+                            results.append([(latter_language, latter_keystrokes)])
+                        elif latter_keystrokes == "":
+                            results.append([(former_language, former_keystrokes)])
+                        else:
+                            results.append([(former_language, former_keystrokes), (latter_language, latter_keystrokes)])
 
-        # if results == []:
-        #     results.append([("english", input_stroke)])
         if results == []:
             results.append([("english", input_stroke)])
-            results.append([("bopomofo", input_stroke)])
-            results.append([("cangjie", input_stroke)])
-            results.append([("pinyin", input_stroke)])
-
+            
         return results
 
 
