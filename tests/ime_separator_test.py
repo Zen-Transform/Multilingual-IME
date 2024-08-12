@@ -11,7 +11,10 @@ from multilingual_ime.data_preprocess.typo_generater import TypoGenerater
 from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
 from multilingual_ime.ime_separator import IMESeparator
 from multilingual_ime.ime_handler import IMEHandler
+from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter, IMEConverter
 from multilingual_ime.core.multi_job_processing import multiprocessing
+from multilingual_ime.ime_handler import custom_tokenizer_bopomofo, custom_tokenizer_cangjie, custom_tokenizer_pinyin, custom_tokenizer_english
+
 
 random.seed(42)
 # Generate config
@@ -20,8 +23,8 @@ USER_DEFINE_MAX_DATA_LINE = 20000
 USER_DEFINE_MAX_TEST_LINE = 2000
 CONVERT_LANGUAGES = ["bopomofo", "cangjie", "pinyin", "english"]
 ERROR_TYPE = "random"
-ERROR_RATE = 0.1
-NUM_OF_MIX_IME = 2
+ERROR_RATE = 0
+NUM_OF_MIX_IME = 1
 MIX_WITH_DIFFERENT_NUM_OF_IME = False
 
 # others
@@ -34,7 +37,7 @@ CHINESE_PLAIN_TEXT_FILE_PATH = (
 ENGLISH_PLAIN_TEXT_FILE_PATH = (
     ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_test.txt"
 )
-TEST_FILE_PATH = ".\\tests\\test_data\\labeld_mix_ime_{}{}.txt".format(
+TEST_FILE_PATH = ".\\tests\\test_data\\labeld_one_ime_{}{}.txt".format(
     "r" if ERROR_TYPE == "random" else ("8a" if ERROR_TYPE == "8adjacency" else "e"),
     str(ERROR_RATE).replace(".", "-"),
 )
@@ -85,11 +88,32 @@ def mutiprocess_test(
 
 def _separate_characters_and_words(text):
     # Regular expression to match Chinese characters and English words
-    pattern = re.compile(r"[\u4e00-\u9fff]|[a-zA-Z]+")
+    pattern = re.compile(r"[\u4e00-\u9fff]|[a-zA-Z]+|[ ]")
     # Find all matches in the text
     matches = pattern.findall(text)
     return matches
 
+def batch_conv_test(ime_converter: IMEConverter, tokens: list[str], answer: list[str], ime_type: str) -> dict:
+    sentence_candidate_suggestions = []
+    for token in tokens:
+        ime_converter_candidate = ime_converter.get_candidates(token)
+        ime_converter_candidate = [candidate.word for candidate in ime_converter_candidate]
+        sentence_candidate_suggestions.append(ime_converter_candidate)
+    
+    is_correct = True
+    for candidatas_words, plain_text in zip(sentence_candidate_suggestions, answer):
+        if plain_text not in candidatas_words:
+            is_correct = False
+            break
+    return {
+        "Correct": is_correct,
+        "IME_Type": ime_type,
+        "Test_log": f"IME Type: {ime_type}\n"
+        + f"Input: {tokens}\n"
+        + f"Label: {answer}\n"
+        + f"Output: {sentence_candidate_suggestions}\n"
+        + f"Correct: {is_correct}\n",
+    }
 
 def batch_sep_conv_test(
     ime_handler: IMEHandler, mix_ime_keystrokes: str, separate_answer: list
@@ -319,5 +343,102 @@ if __name__ == "__main__":
                     + f"\n".join([result["Test_log"] for result in results])
                 )
 
-    test_separator()
+    def test_converter():
+        my_bopomofo_IMEConverter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+        )
+        my_cangjie_IMEConverter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json"
+        )
+        my_pinyin_IMEConverter = ChineseIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json"
+        )
+        my_english_IMEConverter = EnglishIMEConverter(
+            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
+        )
+        with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            test_config, test_lines = eval(lines[0]), lines[1:]
+            test_lines = random.sample(
+                test_lines, min(len(test_lines), USER_DEFINE_MAX_TEST_LINE)
+            )
+
+        try:
+            results = []
+            for line in tqdm(test_lines):
+                label_group, line_plain_text_answer = line.strip().split(
+                    DATA_AND_LABEL_SPLITTER
+                )[1::]
+                ime_type, keystroke = eval(label_group)
+
+                if ime_type == "bopomofo":
+                    ime_converter = my_bopomofo_IMEConverter
+                    tokens = custom_tokenizer_bopomofo(keystroke)
+                elif ime_type == "cangjie":
+                    ime_converter = my_cangjie_IMEConverter
+                    tokens = custom_tokenizer_cangjie(keystroke)
+                elif ime_type == "pinyin":
+                    ime_converter = my_pinyin_IMEConverter
+                    tokens = custom_tokenizer_pinyin(keystroke)
+                elif ime_type == "english":
+                    ime_converter = my_english_IMEConverter
+                    tokens = custom_tokenizer_english(keystroke)
+                else:
+                    raise ValueError(f"Unknown ime_type: {ime_type}")
+
+                results.append(
+                    batch_conv_test(
+                        ime_converter,
+                        tokens,
+                        _separate_characters_and_words(line_plain_text_answer),
+                        ime_type,
+                    )
+                )
+
+        except KeyboardInterrupt:
+            print("User interrupt")
+
+        finally:
+            total_test_example = len(results)
+            correct_count = sum(1 for result in results if result["Correct"])
+            ime_acc_dict = {}
+            for result in results:
+                ime_type = result["IME_Type"]
+                if ime_type not in ime_acc_dict:
+                    ime_acc_dict[ime_type] = {"Correct": 0, "Total": 0}
+                ime_acc_dict[ime_type]["Correct"] += 1 if result["Correct"] else 0
+                ime_acc_dict[ime_type]["Total"] += 1
+            
+            for ime_type, acc_dict in ime_acc_dict.items():
+                acc_dict["Accuracy"] = acc_dict["Correct"]/acc_dict["Total"] if acc_dict["Total"] > 0 else 0
+                print(f"IME Type: {ime_type}")
+                print(f"Accuracy: {acc_dict['Accuracy']}, {acc_dict['Correct']}/{acc_dict['Total']}")
+
+            print("============= Test Result =============")
+            print(f"{test_config}")
+            print(f"Test Date: {TIMESTAMP}")
+            print(f"Total Test Sample: {total_test_example}")
+            print(
+                f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}"
+            )
+            print(f"IEM Accuracy: {ime_acc_dict}")
+            with open(
+                SEPARATOR_CONVERTOR_TEST_RESULT_FILE_PATH, "w", encoding="utf-8"
+            ) as f:
+                f.write(
+                    f"============= Test Result =============\n"
+                    + f"{test_config}\n"
+                    + f"Test Date: {TIMESTAMP}\n"
+                    + f"Total Test Sample: {total_test_example}\n"
+                    + f"Correct: {correct_count}\n"
+                    + f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n"
+                    + f"IEM Accuracy: {ime_acc_dict}\n"
+                    + f"\n"
+                    + f"\n".join([result["Test_log"] for result in results])
+                )
+
+    # generate_mix_ime_test_data()
+    # test_separator()
     # test_separator_conveter()
+    test_converter()
+        
