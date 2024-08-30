@@ -46,8 +46,7 @@ class IMESeparator:
                         else:
                             results.append([(former_language, former_keystrokes), (latter_language, latter_keystrokes)])
 
-        if results == []:
-            results.append([("english", input_stroke)])
+        results.append([("english", input_stroke)])  # Assume User intends to input English(gibberish)
             
         return results
 
