@@ -73,15 +73,15 @@ def process_line(mix_ime_group: list[(str, str)]) -> str:
 def mutiprocess_test(
     separator: IMESeparator, mix_ime_keystrokes: str, separate_answer: list
 ) -> dict:
-    separat_result = separator.separate(mix_ime_keystrokes)
-    is_correct = separate_answer in separat_result
+    separate_result = separator.separate(mix_ime_keystrokes)
+    is_correct = separate_answer in separate_result
     return {
         "Correct": is_correct,
-        "Output_Len": len(separat_result),
+        "Output_Len": len(separate_result),
         "Test_log": f"Input: {mix_ime_keystrokes}\n"
         + f"Label: {separate_answer}\n"
-        + f"Output: {separat_result}\n"
-        + f"Output_Len: {len(separat_result)}\n"
+        + f"Output: {separate_result}\n"
+        + f"Output_Len: {len(separate_result)}\n"
         + f"Correct: {is_correct}\n",
     }
 
@@ -101,8 +101,8 @@ def batch_conv_test(ime_converter: IMEConverter, tokens: list[str], answer: list
         sentence_candidate_suggestions.append(ime_converter_candidate)
     
     is_correct = True
-    for candidatas_words, plain_text in zip(sentence_candidate_suggestions, answer):
-        if plain_text not in candidatas_words:
+    for candidates_words, plain_text in zip(sentence_candidate_suggestions, answer):
+        if plain_text not in candidates_words:
             is_correct = False
             break
     return {
@@ -182,10 +182,10 @@ if __name__ == "__main__":
 
         with tqdm(total=MAX_DATA_LINE) as pbar, Pool() as pool:
 
-            def updete_pbar(*a):
+            def update_pbar(*a):
                 pbar.update()
 
-            reuslt = []
+            result = []
             for num_of_mix_ime in num_of_mix_ime_list:
                 sampled_languages = random.sample(CONVERT_LANGUAGES, k=num_of_mix_ime)
                 mix_ime_group = []
@@ -195,16 +195,16 @@ if __name__ == "__main__":
                     else:
                         mix_ime_group.append((language, chinese_lines.pop(0)))
 
-                reuslt.append(
+                result.append(
                     pool.apply_async(
-                        process_line, args=(mix_ime_group,), callback=updete_pbar
+                        process_line, args=(mix_ime_group,), callback=update_pbar
                     )
                 )
 
-            reuslt = [res.get() for res in reuslt]
-            reuslt.insert(0, str(config))
+            result = [res.get() for res in result]
+            result.insert(0, str(config))
             with open(TEST_FILE_PATH, "w", encoding="utf-8") as f:
-                f.write("\n".join(reuslt))
+                f.write("\n".join(result))
 
     def _user_want_to_overwrite(file_path: str) -> bool:
         return (
@@ -217,9 +217,9 @@ if __name__ == "__main__":
     def _calculate_len_score(results: dict) -> float:
         len_score = 0
         for result in results:
-            numerater = 1 if result["Correct"] else 0
-            denumerator = result["Output_Len"]
-            len_score += numerater / denumerator if denumerator > 0 else 0
+            numerator = 1 if result["Correct"] else 0
+            denominator = result["Output_Len"]
+            len_score += numerator / denominator if denominator > 0 else 0
         return len_score
 
     def test_separator():  # Testing separator on mixed ime data
@@ -285,7 +285,7 @@ if __name__ == "__main__":
                     + f"\n".join([result["Test_log"] for result in results])
                 )
 
-    def test_separator_conveter():  # Testing separator & converter on mixed ime data
+    def test_separator_converter():  # Testing separator & converter on mixed ime data
         ime_handler = IMEHandler()
         if not os.path.exists(TEST_FILE_PATH) or (
             os.path.exists(TEST_FILE_PATH) and _user_want_to_overwrite(TEST_FILE_PATH)
@@ -344,6 +344,13 @@ if __name__ == "__main__":
                 )
 
     def test_converter():
+        if not os.path.exists(TEST_FILE_PATH) or (
+            os.path.exists(TEST_FILE_PATH) and _user_want_to_overwrite(TEST_FILE_PATH)
+        ):
+            generate_mix_ime_test_data()
+
+        assert os.path.exists(TEST_FILE_PATH), f"{TEST_FILE_PATH} not found"
+
         my_bopomofo_IMEConverter = ChineseIMEConverter(
             ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
         )
