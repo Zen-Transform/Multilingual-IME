@@ -1,10 +1,10 @@
 import re
 import time
 
-from multilingual_ime.ime_separator import IMESeparator
-from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter
-from multilingual_ime.candidate import CandidateWord
-from multilingual_ime.core.custom_decorators import not_implemented
+from .ime_separator import IMESeparator
+from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
+from .candidate import CandidateWord
+from .core.custom_decorators import not_implemented
 
 
 def custom_tokenizer_bopomofo(text):

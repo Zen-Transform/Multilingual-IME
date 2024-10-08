@@ -13,7 +13,7 @@ from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import MulticlassConfusionMatrix, MulticlassAccuracy
 
-from data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
+from .data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
 
 class KeystrokeDataset(Dataset):
     def __init__(self, data: list[torch.Tensor, torch.Tensor]):
