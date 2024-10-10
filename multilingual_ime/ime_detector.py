@@ -5,7 +5,7 @@ import joblib
 import torch
 from colorama import Fore, Style
 
-from .data_preprocess.keystroke_tokenizer import KeystrokeTokenizer
+from .keystroke_tokenizer import KeystrokeTokenizer
 from .core.custom_decorators import deprecated
 
 MAX_TOKEN_SIZE = 30
