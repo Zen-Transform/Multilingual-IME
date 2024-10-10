@@ -12,7 +12,6 @@ from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConver
 from multilingual_ime.ime_separator import IMESeparator
 from multilingual_ime.ime_handler import IMEHandler
 from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter, IMEConverter
-from multilingual_ime.core.multi_job_processing import multiprocessing
 from multilingual_ime.ime_handler import custom_tokenizer_bopomofo, custom_tokenizer_cangjie, custom_tokenizer_pinyin, custom_tokenizer_english
 
 
@@ -23,8 +22,8 @@ USER_DEFINE_MAX_DATA_LINE = 20000
 USER_DEFINE_MAX_TEST_LINE = 2000
 CONVERT_LANGUAGES = ["bopomofo", "cangjie", "pinyin", "english"]
 ERROR_TYPE = "random"
-ERROR_RATE = 0
-NUM_OF_MIX_IME = 1
+ERROR_RATE = 0.1
+NUM_OF_MIX_IME = 2
 MIX_WITH_DIFFERENT_NUM_OF_IME = False
 
 # others
@@ -37,7 +36,7 @@ CHINESE_PLAIN_TEXT_FILE_PATH = (
 ENGLISH_PLAIN_TEXT_FILE_PATH = (
     ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_English_multi_test.txt"
 )
-TEST_FILE_PATH = ".\\tests\\test_data\\labeld_one_ime_{}{}.txt".format(
+TEST_FILE_PATH = ".\\tests\\test_data\\labeled_mix_ime_{}{}.txt".format(
     "r" if ERROR_TYPE == "random" else ("8a" if ERROR_TYPE == "8adjacency" else "e"),
     str(ERROR_RATE).replace(".", "-"),
 )
@@ -75,9 +74,19 @@ def mutiprocess_test(
 ) -> dict:
     separate_result = separator.separate(mix_ime_keystrokes)
     is_correct = separate_answer in separate_result
+
+
+    if is_correct:
+        precision = 1/len(separate_result) if len(separate_result) > 0 else 0
+    else:
+        precision = 0
+    recall = 1 if is_correct else 0
+
     return {
         "Correct": is_correct,
         "Output_Len": len(separate_result),
+        "Recall": recall,
+        "Precision": precision,
         "Test_log": f"Input: {mix_ime_keystrokes}\n"
         + f"Label: {separate_answer}\n"
         + f"Output: {separate_result}\n"
@@ -258,6 +267,10 @@ if __name__ == "__main__":
             total_test_example = len(results)
             correct_count = sum(1 for result in results if result["Correct"])
             prediction_len_count = sum(result["Output_Len"] for result in results)
+            avg_recall = sum(result["Recall"] for result in results) / total_test_example 
+            avg_precision = sum(result["Precision"] for result in results) / total_test_example
+            what_f1_score = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall) if avg_precision + avg_recall > 0 else 0
+
             prediction_len_count_correct = sum(
                 result["Output_Len"] for result in results if result["Correct"]
             )
@@ -275,12 +288,17 @@ if __name__ == "__main__":
                     + f"{test_config}\n"
                     + f"Test Date: {TIMESTAMP}\n"
                     + f"Total Test Sample: {total_test_example}\n"
+                    + "\n"
                     + f"Correct: {correct_count}\n"
                     + f"Total Predictions: {prediction_len_count}\n"
                     + f"Average Output Len: {prediction_len_count/total_test_example}\n"
                     + f"Average Correct Output Len: {prediction_len_count_correct/total_test_example}\n"
                     + f"Accuracy: {correct_count/total_test_example}, {correct_count}/{total_test_example}\n"
                     + f"Len Score: {len_score/total_test_example}\n"
+                    + f"\n"
+                    + f"Avg. Recall: {avg_recall}\n"
+                    + f"Avg. Precision: {avg_precision}\n"
+                    + f"? F1 Score: {what_f1_score}\n"
                     + f"\n"
                     + f"\n".join([result["Test_log"] for result in results])
                 )
@@ -445,7 +463,7 @@ if __name__ == "__main__":
                 )
 
     # generate_mix_ime_test_data()
-    # test_separator()
+    test_separator()
     # test_separator_conveter()
-    test_converter()
+    # test_converter()
         
