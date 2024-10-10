@@ -4,10 +4,10 @@ import random
 
 from tqdm import tqdm
 
-from multilingual_ime.data_preprocess.language_cleaner import LanguageCleaner
-from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
-from multilingual_ime.data_preprocess.typo_generater import TypoGenerater
-from multilingual_ime.data_preprocess.ime_keys import IMEKeys
+from data_preprocess.language_cleaner import LanguageCleaner
+from data_preprocess.keystroke_converter import KeyStrokeConverter
+from data_preprocess.typo_generater import TypoGenerater
+from data_preprocess.ime_keys import IMEKeys
 
 random.seed(42)
 

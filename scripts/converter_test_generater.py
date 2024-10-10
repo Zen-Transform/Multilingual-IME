@@ -5,8 +5,8 @@ from multiprocessing import Pool
 
 from tqdm import tqdm
 
-from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
-from multilingual_ime.data_preprocess.typo_generater import TypoGenerater
+from data_preprocess.keystroke_converter import KeyStrokeConverter
+from data_preprocess.typo_generater import TypoGenerater
 
 def process_line(language, line):
     keystroke = KeyStrokeConverter.convert(line, convert_type=language)
