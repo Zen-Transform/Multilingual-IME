@@ -10,29 +10,29 @@ class IMESeparator:
         self._bopomofo_detector = IMEDetectorOneHot(
             Path(__file__).parent
             / "src"
-            / "model_dump"
-            / "one_hot_dl_model_bopomofo_2024-07-26.pkl",
+            / "models"
+            / "one_hot_dl_model_bopomofo_2024-10-13.pth",
             device=self._DEVICE,
         )
         self._eng_detector = IMEDetectorOneHot(
             Path(__file__).parent
             / "src"
-            / "model_dump"
-            / "one_hot_dl_model_english_2024-07-26.pkl",
+            / "models"
+            / "one_hot_dl_model_english_2024-10-13.pth",
             device=self._DEVICE,
         )
         self._cangjie_detector = IMEDetectorOneHot(
             Path(__file__).parent
             / "src"
-            / "model_dump"
-            / "one_hot_dl_model_cangjie_2024-07-26.pkl",
+            / "models"
+            / "one_hot_dl_model_cangjie_2024-10-13.pth",
             device=self._DEVICE,
         )
         self._pinyin_detector = IMEDetectorOneHot(
             Path(__file__).parent
             / "src"
-            / "model_dump"
-            / "one_hot_dl_model_pinyin_2024-07-26.pkl",
+            / "models"
+            / "one_hot_dl_model_pinyin_2024-10-13.pth",
             device=self._DEVICE,
         )
 
