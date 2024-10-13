@@ -9,7 +9,6 @@ package-mode = true
 readme = "README.md"
 packages = [
     { include = "data_preprocess", from = "." }
-    { exclude = ["Datasets", "documents", "reports", "scripts", "tests"], from = "." }
 ]
 include = ["pyproject.toml", "README.md", "LICENSE"]
 
@@ -18,14 +17,18 @@ python = "^3.9"
 pytest = "^8.2.1"
 tqdm = "^4.66.4"
 joblib = "^1.4.2"
-torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.3.1%2Bcu121-cp39-cp39-win_amd64.whl"}  # Bad workaround, only for Cuda 12.1, Python 3.9, Windows_amd64, change the url according to your environment
+torch = { version="^2.3.1", source = "torch"}
 numpy = "<2.0"
 torchmetrics = "^1.4.0.post0"
 matplotlib = "^3.9.1"
 pypinyin = "^0.52.0"
 
-[]
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = 'supplemental'
