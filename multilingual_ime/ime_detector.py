@@ -8,6 +8,7 @@ from colorama import Fore, Style
 
 from .keystroke_tokenizer import KeystrokeTokenizer
 from .core.custom_decorators import deprecated
+from .ime_phase1_train import LanguageDetectorModel
 
 MAX_TOKEN_SIZE = 30
 
@@ -34,20 +35,29 @@ class IMEDetectorOneHot(IMEDetector):
         super().__init__()
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self._classifier = None
-        self.load_model(model_path)
+        self._DEVICE = device
 
         if device == "cuda" and not torch.cuda.is_available():
             self.logger.warning("cuda is not available, using cpu instead")
             device = "cpu"
+        if not model_path.endswith(".pth"):
+            self.logger.error("Invalid model path. Model must be a .pth file.")
+            return
 
-        self._DEVICE = device
+        self.load_model(model_path)
         self.logger.info(
             f"Detector created using the {self._DEVICE} device." if verbose_mode else ""
         )
 
     def load_model(self, model_path: str) -> None:
         try:
-            self._classifier = joblib.load(model_path)
+            self._classifier = LanguageDetectorModel(
+                input_shape=MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length(),
+                num_classes=2,
+            )
+            self._classifier.load_state_dict(
+                torch.load(model_path, map_location=self._DEVICE, weights_only=True)
+            )
             self.logger.info(f"Model loaded from {model_path}")
             self.logger.info(self._classifier)
         except Exception as e:
@@ -139,34 +149,30 @@ class IMEDetectorSVM(IMEDetector):
 if __name__ == "__main__":
     try:
         my_bopomofo_detector = IMEDetectorOneHot(
-            Path(__file__).parent
-            / "src"
-            / "model_dump"
-            / "one_hot_dl_model_bopomofo_2024-07-26.pkl"
+            ".\\models\\one_hot_dl_model_bopomofo_2024-10-13.pth",
+            device="cuda",
+            verbose_mode=True,
         )
         my_eng_detector = IMEDetectorOneHot(
-            Path(__file__).parent
-            / "src"
-            / "model_dump"
-            / "one_hot_dl_model_english_2024-07-26.pkl"
+            ".\\models\\one_hot_dl_model_english_2024-10-13.pth",
+            device="cuda",
+            verbose_mode=True,
         )
         my_cangjie_detector = IMEDetectorOneHot(
-            Path(__file__).parent
-            / "src"
-            / "model_dump"
-            / "one_hot_dl_model_cangjie_2024-07-26.pkl"
+            ".\\models\\one_hot_dl_model_cangjie_2024-10-13.pth",
+            device="cuda",
+            verbose_mode=True,
         )
         my_pinyin_detector = IMEDetectorOneHot(
-            Path(__file__).parent
-            / "src"
-            / "model_dump"
-            / "one_hot_dl_model_pinyin_2024-07-26.pkl"
+            ".\\models\\one_hot_dl_model_pinyin_2024-10-13.pth",
+            device="cuda",
+            verbose_mode=True,
         )
         input_text = "su3cl3"
         while True:
             input_text = input("Enter text: ")
             is_bopomofo = my_bopomofo_detector.predict(input_text)
-            is_cangjie = my_cangjie_detector.predict(input_text)
+            # is_cangjie = my_cangjie_detector.predict(input_text)
             is_english = my_eng_detector.predict(input_text)
             is_pinyin = my_pinyin_detector.predict(input_text)
 
@@ -174,9 +180,9 @@ if __name__ == "__main__":
                 Fore.GREEN + "bopomofo" if is_bopomofo else Fore.RED + "bopomofo",
                 end=" ",
             )
-            print(
-                Fore.GREEN + "cangjie" if is_cangjie else Fore.RED + "cangjie", end=" "
-            )
+            # print(
+            #     Fore.GREEN + "cangjie" if is_cangjie else Fore.RED + "cangjie", end=" "
+            # )
             print(
                 Fore.GREEN + "english" if is_english else Fore.RED + "english", end=" "
             )

@@ -1,6 +1,7 @@
 import os
 import random
 from datetime import datetime
+from pathlib import Path
 
 import joblib
 import torch
@@ -14,6 +15,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import MulticlassConfusionMatrix, MulticlassAccuracy
 
 from .keystroke_tokenizer import KeystrokeTokenizer
+from .deep_models import LanguageDetectorModel
+
 
 class KeystrokeDataset(Dataset):
     def __init__(self, data: list[torch.Tensor, torch.Tensor]):
@@ -38,29 +41,33 @@ print(f"Using {DEVICE} device")
 
 
 # DATA Configuration
-NUM_OF_TRAIN_DATA = 600  # 6B data
+NUM_OF_TRAIN_DATA = 600000  # 6K data = 600,000
 NONE_ERROR_VS_ERROR_RATIO = 0.75
 TRAIN_VAL_SPLIT_RATIO = 0.8
 MAX_TOKEN_SIZE = 30
 
 # Model Configuration
 MODEL_PREFIX = "one_hot_dl_model"
-LANGUAGE = "bopomofo"
+LANGUAGE = "cangjie"
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
 INPUT_SHAPE = MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length()
 NUM_CLASSES = 2
-MODEL_SAVE_PATH = f".\\multilingual_ime\\src\\model_dump\\{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pkl"
+MODEL_SAVE_PATH = f".\\models\\{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pth"
 
 # Training Configuration
-EPOCHS = 100
+EPOCHS = 5
 BATCH_SIZE = 32
 LEARNING_RATE = 0.001
 SKIP_VALIDATION = False
 
 
 if __name__ == "__main__":
-    Train_data_no_error_path = ".\\Datasets\\Train_Datasets\\labeled_bopomofo_0_train.txt"
-    Train_data_with_error_path = ".\\Datasets\\Train_Datasets\\labeled_bopomofo_r0-1_train.txt" 
+    Train_data_no_error_path = (
+        f".\\Datasets\\Train_Datasets\\labeled_{LANGUAGE}_0_train.txt"
+    )
+    Train_data_with_error_path = (
+        f".\\Datasets\\Train_Datasets\\labeled_{LANGUAGE}_r0-1_train.txt"
+    )
 
     if not os.path.exists(Train_data_no_error_path):
         raise FileNotFoundError(f"Train data not found at {Train_data_no_error_path}")
@@ -72,50 +79,52 @@ if __name__ == "__main__":
     with open(Train_data_with_error_path, "r", encoding="utf-8") as f:
         Train_data_with_error = f.readlines()
 
-    training_datas = random.sample(Train_data_no_error,   int(NUM_OF_TRAIN_DATA * NONE_ERROR_VS_ERROR_RATIO)) \
-                   + random.sample(Train_data_with_error, int(NUM_OF_TRAIN_DATA * (1 - NONE_ERROR_VS_ERROR_RATIO)))
-    
+    training_datas = random.sample(
+        Train_data_no_error, int(NUM_OF_TRAIN_DATA * NONE_ERROR_VS_ERROR_RATIO)
+    ) + random.sample(
+        Train_data_with_error, int(NUM_OF_TRAIN_DATA * (1 - NONE_ERROR_VS_ERROR_RATIO))
+    )
+
     # format data to one-hot encoding and Tensor
     train_data_tensor = []
     for train_example in training_datas:
-        keystoke, target = train_example.strip('\n').split("\t")
+        keystoke, target = train_example.strip("\n").split("\t")
 
-        token_ids = KeystrokeTokenizer.token_to_ids(KeystrokeTokenizer.tokenize(keystoke))
-        token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE 
+        token_ids = KeystrokeTokenizer.token_to_ids(
+            KeystrokeTokenizer.tokenize(keystoke)
+        )
+        token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE
         token_ids += [0] * (MAX_TOKEN_SIZE - len(token_ids))  # padding
 
-
-        one_hot_keystrokes = torch.zeros(MAX_TOKEN_SIZE, KeystrokeTokenizer.key_labels_length()) \
-                           + torch.eye(KeystrokeTokenizer.key_labels_length())[token_ids]
+        one_hot_keystrokes = (
+            torch.zeros(MAX_TOKEN_SIZE, KeystrokeTokenizer.key_labels_length())
+            + torch.eye(KeystrokeTokenizer.key_labels_length())[token_ids]
+        )
         one_hot_keystrokes = one_hot_keystrokes.view(-1)  # flatten
-        one_hot_targets = torch.tensor([1, 0], dtype=torch.float32) if target == "0" else torch.tensor([0, 1], dtype=torch.float32)
-        
-        assert INPUT_SHAPE == list(one_hot_keystrokes.view(-1).shape)[0], f"{INPUT_SHAPE} != {list(one_hot_keystrokes.view(-1).shape)[0]}"
+        one_hot_targets = (
+            torch.tensor([1, 0], dtype=torch.float32)
+            if target == "0"
+            else torch.tensor([0, 1], dtype=torch.float32)
+        )
+
+        assert (
+            INPUT_SHAPE == list(one_hot_keystrokes.view(-1).shape)[0]
+        ), f"{INPUT_SHAPE} != {list(one_hot_keystrokes.view(-1).shape)[0]}"
         train_data_tensor.append([one_hot_keystrokes, one_hot_targets])
 
     print("Data loaded")
-    train_data, val_data = torch.utils.data.random_split(train_data_tensor, [TRAIN_VAL_SPLIT_RATIO, 1 - TRAIN_VAL_SPLIT_RATIO])
+    train_data, val_data = torch.utils.data.random_split(
+        train_data_tensor, [TRAIN_VAL_SPLIT_RATIO, 1 - TRAIN_VAL_SPLIT_RATIO]
+    )
 
     train_data = KeystrokeDataset(train_data)
     val_data = KeystrokeDataset(val_data)
     train_data_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
     val_data_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False)
 
-    model = nn.Sequential(
-            nn.Linear(INPUT_SHAPE, 512),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256,128),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(128, NUM_CLASSES),
-            nn.Softmax(dim=0),
-        )
+    model = LanguageDetectorModel(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES)
     model.to(DEVICE)
-    criterion = nn.CrossEntropyLoss()                                        
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     fig = None
@@ -151,15 +160,19 @@ if __name__ == "__main__":
                 train_labels.append(labels)
                 train_loss += batch_loss
 
-                train_pbar.set_postfix(batch_loss=batch_loss, batch_acc=batch_acc(predictions, labels))
+                train_pbar.set_postfix(
+                    batch_loss=batch_loss, batch_acc=batch_acc(predictions, labels)
+                )
                 train_pbar.update(1)
-        
+
         train_metric = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
-        print(f"Training loss: {train_loss}, Training accuracy: {train_metric(torch.cat(train_predicts), torch.cat(train_labels))}")
+        print(
+            f"Training loss: {train_loss}, Training accuracy: {train_metric(torch.cat(train_predicts), torch.cat(train_labels))}"
+        )
 
         if SKIP_VALIDATION:
             continue
-        
+
         # Validation
         model.eval()
         val_predicts = []
@@ -173,17 +186,21 @@ if __name__ == "__main__":
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_Y)
 
-
                     predictions = torch.argmax(outputs.data, dim=-1)
                     labels = torch.argmax(batch_Y, dim=-1)
                     batch_val_loss = loss.item()
-                    batch_val_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
+                    batch_val_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(
+                        DEVICE
+                    )
 
                     val_predicts.append(predictions)
                     val_labels.append(labels)
                     val_loss += batch_val_loss
-                    
-                    pbar.set_postfix(batch_val_loss=batch_val_loss, batch_val_acc=batch_val_acc(predictions, labels))
+
+                    pbar.set_postfix(
+                        batch_val_loss=batch_val_loss,
+                        batch_val_acc=batch_val_acc(predictions, labels),
+                    )
                     pbar.update(1)
         val_acc_metric = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
         val_acc = val_acc_metric(torch.cat(val_predicts), torch.cat(val_labels))
@@ -192,7 +209,8 @@ if __name__ == "__main__":
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             print(f"Best model saved with accuracy {best_val_acc}")
-            joblib.dump(model, MODEL_SAVE_PATH)
+            torch.save(model.state_dict(), MODEL_SAVE_PATH)
+            # joblib.dump(model, MODEL_SAVE_PATH)
 
         print("====================================\n")
 
