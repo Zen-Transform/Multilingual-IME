@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import joblib
 import torch
@@ -138,16 +139,28 @@ class IMEDetectorSVM(IMEDetector):
 if __name__ == "__main__":
     try:
         my_bopomofo_detector = IMEDetectorOneHot(
-            ".\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-26.pkl"
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_bopomofo_2024-07-26.pkl"
         )
         my_eng_detector = IMEDetectorOneHot(
-            ".\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-26.pkl"
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_english_2024-07-26.pkl"
         )
         my_cangjie_detector = IMEDetectorOneHot(
-            ".\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-26.pkl"
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_cangjie_2024-07-26.pkl"
         )
         my_pinyin_detector = IMEDetectorOneHot(
-            ".\\multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-26.pkl"
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_pinyin_2024-07-26.pkl"
         )
         input_text = "su3cl3"
         while True:

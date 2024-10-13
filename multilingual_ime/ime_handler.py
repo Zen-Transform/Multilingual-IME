@@ -1,5 +1,6 @@
 import re
 import time
+from pathlib import Path
 
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
@@ -47,16 +48,28 @@ def custom_tokenizer_pinyin(text):
 class IMEHandler:
     def __init__(self) -> None:
         self._bopomofo_converter = ChineseIMEConverter(
-            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+            Path(__file__).parent
+            / "src"
+            / "keystroke_mapping_dictionary"
+            / "bopomofo_dict_with_frequency.json"
         )
         self._cangjie_converter = ChineseIMEConverter(
-            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json"
+            Path(__file__).parent
+            / "src"
+            / "keystroke_mapping_dictionary"
+            / "cangjie_dict_with_frequency.json"
         )
         self._pinyin_converter = ChineseIMEConverter(
-            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json"
+            Path(__file__).parent
+            / "src"
+            / "keystroke_mapping_dictionary"
+            / "pinyin_dict_with_frequency.json"
         )
         self._english_converter = EnglishIMEConverter(
-            ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
+            Path(__file__).parent
+            / "src"
+            / "keystroke_mapping_dictionary"
+            / "english_dict_with_frequency.json"
         )
         self._separator = IMESeparator(use_cuda=False)
 

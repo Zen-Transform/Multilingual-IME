@@ -1,5 +1,6 @@
 import json
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from .trie import Trie
 from .candidate import CandidateWord
@@ -19,7 +20,9 @@ class IMEConverter(ABC):
     def __init__(self, data_dict_path: str):
         self.trie = Trie()
         try:
-            keystroke_mapping_dict = json.load(open(data_dict_path, "r", encoding="utf-8"))
+            keystroke_mapping_dict = json.load(
+                open(data_dict_path, "r", encoding="utf-8")
+            )
             if keystroke_mapping_dict is not None:
                 for key, value in keystroke_mapping_dict.items():
                     Candidate_words = [
@@ -86,16 +89,28 @@ class EnglishIMEConverter(IMEConverter):
 
 if __name__ == "__main__":
     my_bopomofo_IMEConverter = ChineseIMEConverter(
-        ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+        Path(__file__).parent
+        / "src"
+        / "keystroke_mapping_dictionary"
+        / "bopomofo_dict_with_frequency.json"
     )
     my_cangjie_IMEConverter = ChineseIMEConverter(
-        ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json"
+        Path(__file__).parent
+        / "src"
+        / "keystroke_mapping_dictionary"
+        / "cangjie_dict_with_frequency.json"
     )
     my_pinyin_IMEConverter = ChineseIMEConverter(
-        ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json"
+        Path(__file__).parent
+        / "src"
+        / "keystroke_mapping_dictionary"
+        / "pinyin_dict_with_frequency.json"
     )
     my_english_IMEConverter = EnglishIMEConverter(
-        ".\\multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
+        Path(__file__).parent
+        / "src"
+        / "keystroke_mapping_dictionary"
+        / "english_dict_with_frequency.json"
     )
 
     for candidate_word in my_english_IMEConverter.get_candidates("APPLE"):

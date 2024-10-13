@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from .ime_detector import IMEDetectorOneHot
 
 
@@ -6,19 +8,31 @@ class IMESeparator:
         self._DEVICE = "cuda" if use_cuda else "cpu"
 
         self._bopomofo_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_bopomofo_2024-07-26.pkl",
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_bopomofo_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._eng_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_english_2024-07-26.pkl",
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_english_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._cangjie_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_cangjie_2024-07-26.pkl",
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_cangjie_2024-07-26.pkl",
             device=self._DEVICE,
         )
         self._pinyin_detector = IMEDetectorOneHot(
-            "multilingual_ime\\src\\model_dump\\one_hot_dl_model_pinyin_2024-07-26.pkl",
+            Path(__file__).parent
+            / "src"
+            / "model_dump"
+            / "one_hot_dl_model_pinyin_2024-07-26.pkl",
             device=self._DEVICE,
         )
 
@@ -36,18 +50,27 @@ class IMESeparator:
             latter_keystrokes = input_stroke[index:]
             for former_detector, former_language in detector_groups:
                 for latter_detector, latter_language in detector_groups:
-                    if former_detector.predict(former_keystrokes) \
-                        and latter_detector.predict(latter_keystrokes) \
-                        and former_detector != latter_detector:
+                    if (
+                        former_detector.predict(former_keystrokes)
+                        and latter_detector.predict(latter_keystrokes)
+                        and former_detector != latter_detector
+                    ):
                         if former_keystrokes == "":
                             results.append([(latter_language, latter_keystrokes)])
                         elif latter_keystrokes == "":
                             results.append([(former_language, former_keystrokes)])
                         else:
-                            results.append([(former_language, former_keystrokes), (latter_language, latter_keystrokes)])
+                            results.append(
+                                [
+                                    (former_language, former_keystrokes),
+                                    (latter_language, latter_keystrokes),
+                                ]
+                            )
 
-        results.append([("english", input_stroke)])  # Assume User intends to input English(gibberish)
-            
+        results.append(
+            [("english", input_stroke)]
+        )  # Assume User intends to input English(gibberish)
+
         return results
 
 
