@@ -7,8 +7,8 @@ from multiprocessing import Pool
 from tqdm import tqdm
 
 
-from multilingual_ime.data_preprocess.typo_generater import TypoGenerater
-from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
+from data_preprocess.typo_generater import TypoGenerater
+from data_preprocess.keystroke_converter import KeyStrokeConverter
 from multilingual_ime.ime_separator import IMESeparator
 from multilingual_ime.ime_handler import IMEHandler
 from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter, IMEConverter
