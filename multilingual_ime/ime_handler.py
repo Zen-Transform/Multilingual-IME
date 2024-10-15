@@ -14,9 +14,6 @@ def custom_tokenizer_bopomofo(text):
     pattern = re.compile(r"(?<=3|4|6|7| )")
     tokens = pattern.split(text)
     tokens = [token for token in tokens if token]
-    if tokens[-1].find("§") != -1:
-        tokens.pop()
-
     return tokens
 
 
@@ -26,8 +23,6 @@ def custom_tokenizer_cangjie(text):
     pattern = re.compile(r"(?<=[ ])")
     tokens = pattern.split(text)
     tokens = [token for token in tokens if token]
-    if tokens[-1].find("§") != -1:
-        tokens.pop()
     return tokens
 
 
@@ -40,8 +35,13 @@ def custom_tokenizer_pinyin(text):
     )
     matches = re.findall(pattern, text)
     tokens.extend(matches)
-    if tokens and tokens[-1].find("§") != -1:
-        tokens.pop()
+    return tokens
+
+
+def custom_tokenizer_english(text):
+    if not text:
+        return []
+    tokens = re.findall(r"\w+|[^\w\s]|\s", text)
     return tokens
 
 
