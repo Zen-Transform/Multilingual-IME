@@ -5,7 +5,7 @@ from pathlib import Path
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
 from .candidate import CandidateWord
-from .core.custom_decorators import not_implemented
+from .core.custom_decorators import not_implemented, lru_cache_with_doc
 
 
 def custom_tokenizer_bopomofo(text):
@@ -26,16 +26,41 @@ def custom_tokenizer_cangjie(text):
     return tokens
 
 
-def custom_tokenizer_pinyin(text):
-    if not text:
-        return []
-    tokens = []
-    pattern = re.compile(
-        r"(?:[bpmfdtnlgkhjqxzcsyw]|[zcs]h)?(?:[aeiouv]?ng|[aeiou](?![aeiou])|[aeiou]?[aeiou]?r|[aeiou]?[aeiou]?[aeiou])"
-    )
-    matches = re.findall(pattern, text)
-    tokens.extend(matches)
-    return tokens
+with open(
+    Path(__file__).parent / "src" / "intact_pinyin.txt", "r", encoding="utf-8"
+) as f:
+    intact_pinyin_set = set(s for s in f.read().split("\n"))
+
+all_pinyin_set = set(s[:i] for s in intact_pinyin_set for i in range(1, len(s) + 1))
+
+intact_cut_pinyin_ans = {}
+all_cut_pinyin_ans = {}
+
+
+def custom_tokenizer_pinyin(pinyin: str, is_intact: bool = True) -> list[str]:
+
+    @lru_cache_with_doc(maxsize=128, typed=False)
+    def cut_pinyin(pinyin: str, is_intact=False) -> list[tuple[str]]:
+        # Modified from https://github.com/OrangeX4/simple-pinyin.git
+
+        if is_intact:
+            pinyin_set = intact_pinyin_set
+        else:
+            pinyin_set = all_pinyin_set
+
+        # If result is not in the word set, DP by recursion
+        ans = [] if pinyin not in pinyin_set else [(pinyin,)]
+        for i in range(1, len(pinyin)):
+            # If pinyin[:i], is a right word, continue DP
+            if pinyin[:i] in pinyin_set:
+                appendices = cut_pinyin(pinyin[i:], is_intact)
+                for appendix in appendices:
+                    ans.append((pinyin[:i],) + appendix)
+        return ans
+
+    # TODO: Add cut_pinyin_with_error_correction
+
+    return list(*cut_pinyin(pinyin, is_intact))
 
 
 def custom_tokenizer_english(text):
