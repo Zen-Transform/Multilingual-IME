@@ -37,12 +37,11 @@ intact_cut_pinyin_ans = {}
 all_cut_pinyin_ans = {}
 
 
-def custom_tokenizer_pinyin(pinyin: str, is_intact: bool = True) -> list[str]:
+def custom_tokenizer_pinyin(pinyin: str) -> list[tuple[str]]:
+    # Modified from https://github.com/OrangeX4/simple-pinyin.git
 
     @lru_cache_with_doc(maxsize=128, typed=False)
-    def cut_pinyin(pinyin: str, is_intact=False) -> list[tuple[str]]:
-        # Modified from https://github.com/OrangeX4/simple-pinyin.git
-
+    def cut_pinyin(pinyin: str, is_intact: bool = False) -> list[tuple[str]]:
         if is_intact:
             pinyin_set = intact_pinyin_set
         else:
@@ -58,9 +57,22 @@ def custom_tokenizer_pinyin(pinyin: str, is_intact: bool = True) -> list[str]:
                     ans.append((pinyin[:i],) + appendix)
         return ans
 
-    # TODO: Add cut_pinyin_with_error_correction
+    def cut_pinyin_with_error_correction(pinyin: str) ->  list[tuple[str]]:
+        ans = {}
+        for i in range(1, len(pinyin) - 1):
+            key = pinyin[:i] + pinyin[i + 1] + pinyin[i] + pinyin[i + 2:]
+            value = cut_pinyin(key, is_intact=True)
+            if value:
+                ans[key] = value
+        return [p for t in ans.values() for p in t]
 
-    return list(*cut_pinyin(pinyin, is_intact))
+    intact_ans = cut_pinyin(pinyin, is_intact=True)
+    not_intact_ans = cut_pinyin(pinyin, is_intact=False)
+    with_error_correction_ans = cut_pinyin_with_error_correction(pinyin)
+    total_ans = list(set(intact_ans + not_intact_ans + with_error_correction_ans))
+    total_ans = sorted(total_ans, key=lambda x: len(x))
+    print(total_ans)
+    return total_ans
 
 
 def custom_tokenizer_english(text):
