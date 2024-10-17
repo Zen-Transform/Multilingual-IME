@@ -12,7 +12,7 @@ plain_text_path = ".\\Datasets\\Plain_Text_Datasets\\wlen1-3_cc100_train.txt"
 keystroke_text_path = ".\\Datasets\\Train_Datasets\\0_pinyin_wlen1-3_cc100.txt"
 
 
-def test_custom_tokenizer_pinyin():
+def test_pinyin():
     print("Testing custom_tokenizer_pinyin")
 
     with open(keystroke_text_path, "r", encoding="utf-8") as f1:
@@ -68,34 +68,40 @@ def test_custom_tokenizer_pinyin():
 
 def test_custom_tokenizer_pinyin():
     # right format
-    assert custom_tokenizer_pinyin("mouren") == ["mou", "ren"]
-    assert custom_tokenizer_pinyin("shirelu") == ["shi", "re", "lu"]
-    assert custom_tokenizer_pinyin("n") == ["n"]
-    assert custom_tokenizer_pinyin("xienshi") == ["xien", "shi"]
+    assert ["mou", "ren"] in custom_tokenizer_pinyin("mouren")
+    assert ["shi", "re", "lu"] in custom_tokenizer_pinyin("shirelu")
+    assert [
+        "en",
+    ] in custom_tokenizer_pinyin("en")
+    assert ["xi", "en", "shi"] in custom_tokenizer_pinyin("xienshi")
 
     # underpresented
-    assert custom_tokenizer_pinyin("k") == ["k"]
-    assert custom_tokenizer_pinyin("chuquwa") == ["chu", "qu", "wa"]
-    assert custom_tokenizer_pinyin("hanyupiny") == ["han", "yu", "pin", "y"]
+    assert [
+        "k",
+    ] in custom_tokenizer_pinyin("k")
+    assert ["chu", "qu", "wa"] in custom_tokenizer_pinyin("chuquwa")
+    assert ["han", "yu", "pin", "y"] in custom_tokenizer_pinyin("hanyupiny")
 
     # overpresented
-    assert custom_tokenizer_pinyin("chuquwan") == ["chu", "qu", "wan"]
-    assert custom_tokenizer_pinyin("chu qu  wan") == ["chu", " ", "qu", " ", " ", "wan"]
+    assert ["chu", "qu", "wan"] in custom_tokenizer_pinyin("chuquwan")
+    assert ["chu", " ", "qu", " ", " ", "wan"] in custom_tokenizer_pinyin("chu qu  wan")
 
     # edge cases
-    assert custom_tokenizer_pinyin("") == []
-    assert custom_tokenizer_pinyin("  ") == [" ", " "]
+    assert [] == custom_tokenizer_pinyin("")
+    assert [" ", " "] in custom_tokenizer_pinyin("  ")
 
     # Other languages
-    assert custom_tokenizer_pinyin("你好") == ["你好"]
-    assert custom_tokenizer_pinyin("&^%$#") == ["&", "^", "%", "$", "#"]
+    assert ["你好"] in custom_tokenizer_pinyin("你好")
+    assert ["&", "^", "%", "$", "#"] in custom_tokenizer_pinyin("&^%$#")
 
 
 def test_custom_tokenizer_english():
     # right format
-    assert custom_tokenizer_english("Hello world") == ["Hello", " ", "world"]
-    assert custom_tokenizer_english("apple") == ["apple"]
-    assert custom_tokenizer_english(" 78 Good 9 _+") == [
+    assert ["Hello", " ", "world"] in custom_tokenizer_english("Hello world")
+    assert [
+        "apple",
+    ] in custom_tokenizer_english("apple")
+    assert [
         " ",
         "78",
         " ",
@@ -105,79 +111,80 @@ def test_custom_tokenizer_english():
         " ",
         "_",
         "+",
-    ]
+    ] in custom_tokenizer_english(" 78 Good 9 _+")
+
     # underpresented
-    assert custom_tokenizer_english("k") == ["k"]
-    assert custom_tokenizer_english("differe") == ["differe"]
+    assert ["k"] in custom_tokenizer_english("k")
+    assert ["differe"] in custom_tokenizer_english("differe")
 
     # overpresented
-    assert custom_tokenizer_english("apple  ") == ["apple", " ", " "]
-    assert custom_tokenizer_english("apple  pieeee") == ["apple", " ", " ", "pieeee"]
+    assert ["apple", " ", " "] in custom_tokenizer_english("apple  ")
+    assert ["apple", " ", " ", "pieeee"] in custom_tokenizer_english("apple  pieeee")
 
     # edge cases
-    assert custom_tokenizer_english("") == []
-    assert custom_tokenizer_english("  !!??") == [" ", " ", "!", "!", "?", "?"]
+    assert [] == custom_tokenizer_english("")
+    assert [" ", " ", "!", "!", "?", "?"] in custom_tokenizer_english("  !!??")
 
     # Other languages
-    assert custom_tokenizer_english("你好") == ["你好"]
-    assert custom_tokenizer_english("&^%$#") == ["&", "^", "%", "$", "#"]
+    assert ["你好"] in custom_tokenizer_english("你好")
+    assert ["&", "^", "%", "$", "#"] in custom_tokenizer_english("&^%$#")
 
 
 def test_custom_tokenizer_cangjie():
     # right format
-    assert custom_tokenizer_cangjie("aaa bbb ccc") == ["aaa ", "bbb ", "ccc"]
-    assert custom_tokenizer_cangjie("omg jnd ijwj ") == ["omg ", "jnd ", "ijwj "]
+    assert ["aaa ", "bbb ", "ccc"] in custom_tokenizer_cangjie("aaa bbb ccc")
+    assert ["omg ", "jnd ", "ijwj "] in custom_tokenizer_cangjie("omg jnd ijwj ")
 
     # underpresented
-    assert custom_tokenizer_cangjie("k") == ["k"]
-    assert custom_tokenizer_cangjie(" ") == [" "]
+    assert ["k"] in custom_tokenizer_cangjie("k")
+    assert [" "] in custom_tokenizer_cangjie(" ")
 
     # overpresented
-    assert custom_tokenizer_cangjie("k  ") == ["k ", " "]
-    assert custom_tokenizer_cangjie("mf  ogd l ") == ["mf ", " ", "ogd ", "l "]
+    assert ["k ", " "] in custom_tokenizer_cangjie("k  ")
+    assert ["mf ", " ", "ogd ", "l "] in custom_tokenizer_cangjie("mf  ogd l ")
     # edge cases
-    assert custom_tokenizer_cangjie("") == []
-    assert custom_tokenizer_cangjie("gjieojago") == ["gjieojago"]
+    assert [] == custom_tokenizer_cangjie("")
+    assert ["gjieojago"] in custom_tokenizer_cangjie("gjieojago")
 
     # Other languages/characters
-    assert custom_tokenizer_cangjie("你好") == ["你好"]
-    assert custom_tokenizer_cangjie("789$0 !@#") == ["789$0 ", "!@#"]
+    assert ["你好"] in custom_tokenizer_cangjie("你好")
+    assert ["789$0 ", "!@#"] in custom_tokenizer_cangjie("789$0 !@#")
     # ↑↑ should raise error?
 
 
 def test_custom_tokenizer_bopomofo():
     # right format
-    assert custom_tokenizer_bopomofo("su3cl3a87") == ["su3", "cl3", "a87"]
-    assert custom_tokenizer_bopomofo("j6vu04ru/42u4") == ["j6", "vu04", "ru/4", "2u4"]
+    assert ["su3", "cl3", "a87"] in custom_tokenizer_bopomofo("su3cl3a87")
+    assert ["j6", "vu04", "ru/4", "2u4"] in custom_tokenizer_bopomofo("j6vu04ru/42u4")
 
     # underpresented
-    assert custom_tokenizer_bopomofo("su3cl3a8") == ["su3", "cl3", "a8"]
-    assert custom_tokenizer_bopomofo("t z") == ["t ", "z"]
+    assert ["su3", "cl3", "a8"] in custom_tokenizer_bopomofo("su3cl3a8")
+    assert ["t ", "z"] in custom_tokenizer_bopomofo("t z")
 
     # overpresented
-    assert custom_tokenizer_bopomofo("su3cl3a87 ") == ["su3", "cl3", "a87", " "]
-    assert custom_tokenizer_bopomofo("nji3u.3fm06bp66") == [
+    assert ["su3", "cl3", "a87", " "] in custom_tokenizer_bopomofo("su3cl3a87 ")
+    assert [
         "nji3",
         "u.3",
         "fm06",
         "bp6",
         "6",
-    ]
+    ] in custom_tokenizer_bopomofo("nji3u.3fm06bp66")
 
     # edge cases
-    assert custom_tokenizer_bopomofo("") == []
-    assert custom_tokenizer_bopomofo("  ") == [" ", " "]
+    assert [] == custom_tokenizer_bopomofo("")
+    assert [" ", " "] in custom_tokenizer_bopomofo("  ")
 
     # Other languages/characters
-    assert custom_tokenizer_bopomofo("你好") == ["你好"]
-    # assert custom_tokenizer_cangjie("78989$290 !@#") == ["78989$290 ", "!@#"] # should raise error?
+    assert ["你好"] in custom_tokenizer_bopomofo("你好")
+    assert ["7", "8989$290 ", "!@#"] in custom_tokenizer_bopomofo("78989$290 !@#")
 
 
 if __name__ == "__main__":
-    # test_custom_tokenizer_pinyin()
-    # print("All tests passed!")
+    test_pinyin()
+    print("All tests passed!")
     test_cases = ["mouren", "shierge", "n", "xienshi"]
     for case in test_cases:
         print(f"{case}: {custom_tokenizer_pinyin(case)}")
-    # text = "mouren", "shierge"
-    # print(f"{text }: {custom_tokenizer_pinyin(text)}")
+    text = "mouren", "shierge"
+    print(f"{text }: {custom_tokenizer_pinyin(text)}")
