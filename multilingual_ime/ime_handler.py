@@ -1,6 +1,7 @@
 import re
 import time
 from pathlib import Path
+from itertools import chain
 
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
@@ -8,22 +9,37 @@ from .candidate import CandidateWord
 from .core.custom_decorators import not_implemented, lru_cache_with_doc
 
 
-def custom_tokenizer_bopomofo(text):
-    if not text:
+def custom_tokenizer_bopomofo(bopomofo_keystroke: str) -> list[list[str]]:
+
+    def cut_bopomofo_with_regex(bopomofo_keystroke: str) -> list[str]:
+        if not bopomofo_keystroke:
+            return []
+        tokens = re.split(r"(?<=3|4|6|7| )", bopomofo_keystroke)
+        ans = [token for token in tokens if token]
+        return ans
+
+    if not bopomofo_keystroke:
         return []
-    pattern = re.compile(r"(?<=3|4|6|7| )")
-    tokens = pattern.split(text)
-    tokens = [token for token in tokens if token]
-    return tokens
+
+    assert "".join(cut_bopomofo_with_regex(bopomofo_keystroke)) == bopomofo_keystroke
+    return [cut_bopomofo_with_regex(bopomofo_keystroke)]
 
 
-def custom_tokenizer_cangjie(text):
-    if not text:
+def custom_tokenizer_cangjie(cangjie_keystroke: str) -> list[list[str]]:
+    # TODO: Implement cangjie tokenizer with DP
+
+    def cut_cangjie_with_regex(cangjie_keystroke: str) -> list[str]:
+        if not cangjie_keystroke:
+            return []
+        tokens = re.split(r"(?<=[ ])", cangjie_keystroke)
+        ans = [token for token in tokens if token]
+        return ans
+
+    if not cangjie_keystroke:
         return []
-    pattern = re.compile(r"(?<=[ ])")
-    tokens = pattern.split(text)
-    tokens = [token for token in tokens if token]
-    return tokens
+
+    assert "".join(cut_cangjie_with_regex(cangjie_keystroke)) == cangjie_keystroke
+    return [cut_cangjie_with_regex(cangjie_keystroke)]
 
 
 with open(
@@ -31,55 +47,80 @@ with open(
 ) as f:
     intact_pinyin_set = set(s for s in f.read().split("\n"))
 
+special_characters = " !@#$%^&*()-_=+[]{}|;:'\",.<>?/`~"
+sepcial_char_set = [c for c in special_characters]
+intact_pinyin_set = intact_pinyin_set.union(sepcial_char_set)
+
+# Add special characters, since they will be separated individually
+
 all_pinyin_set = set(s[:i] for s in intact_pinyin_set for i in range(1, len(s) + 1))
 
 intact_cut_pinyin_ans = {}
 all_cut_pinyin_ans = {}
 
 
-def custom_tokenizer_pinyin(pinyin: str) -> list[tuple[str]]:
+def custom_tokenizer_pinyin(pinyin_keystroke: str) -> list[list[str]]:
     # Modified from https://github.com/OrangeX4/simple-pinyin.git
 
     @lru_cache_with_doc(maxsize=128, typed=False)
-    def cut_pinyin(pinyin: str, is_intact: bool = False) -> list[tuple[str]]:
+    def cut_pinyin(pinyin: str, is_intact: bool = False) -> list[list[str]]:
         if is_intact:
             pinyin_set = intact_pinyin_set
         else:
             pinyin_set = all_pinyin_set
 
+        if pinyin in pinyin_set:
+            return [[pinyin]]
+
         # If result is not in the word set, DP by recursion
-        ans = [] if pinyin not in pinyin_set else [(pinyin,)]
+        ans = []
         for i in range(1, len(pinyin)):
             # If pinyin[:i], is a right word, continue DP
             if pinyin[:i] in pinyin_set:
-                appendices = cut_pinyin(pinyin[i:], is_intact)
-                for appendix in appendices:
-                    ans.append((pinyin[:i],) + appendix)
+                former = [pinyin[:i]]
+                appendices_solutions = cut_pinyin(pinyin[i:], is_intact)
+                for appendixes in appendices_solutions:
+                    ans.append(former + appendixes)
+        if ans == []:
+            return [[pinyin]]
         return ans
 
-    def cut_pinyin_with_error_correction(pinyin: str) ->  list[tuple[str]]:
+    def cut_pinyin_with_error_correction(pinyin: str) -> list[str]:
         ans = {}
         for i in range(1, len(pinyin) - 1):
-            key = pinyin[:i] + pinyin[i + 1] + pinyin[i] + pinyin[i + 2:]
-            value = cut_pinyin(key, is_intact=True)
-            if value:
-                ans[key] = value
-        return [p for t in ans.values() for p in t]
+            key = pinyin[:i] + pinyin[i + 1] + pinyin[i] + pinyin[i + 2 :]
+            key_ans = cut_pinyin(key, is_intact=True)
+            if key_ans:
+                ans[key] = key_ans
+        return list(chain.from_iterable(ans.values()))
 
-    intact_ans = cut_pinyin(pinyin, is_intact=True)
-    not_intact_ans = cut_pinyin(pinyin, is_intact=False)
-    with_error_correction_ans = cut_pinyin_with_error_correction(pinyin)
-    total_ans = list(set(intact_ans + not_intact_ans + with_error_correction_ans))
-    total_ans = sorted(total_ans, key=lambda x: len(x))
-    print(total_ans)
+    if not pinyin_keystroke:
+        return []
+
+    total_ans = []
+    total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=True))
+    total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=False))
+    for ans in total_ans:
+        assert "".join(ans) == pinyin_keystroke
+    total_ans.extend(cut_pinyin_with_error_correction(pinyin_keystroke))
+
     return total_ans
 
 
-def custom_tokenizer_english(text):
-    if not text:
+def custom_tokenizer_english(english_keystroke: str) -> list[list[str]]:
+
+    def cut_english(english_keystroke: str) -> list[str]:
+        if not english_keystroke:
+            return []
+        tokens = re.split(r"(\s|[^\w])", english_keystroke)
+        ans = [token for token in tokens if token]
+        return ans
+
+    if not english_keystroke:
         return []
-    tokens = re.findall(r"\w+|[^\w\s]|\s", text)
-    return tokens
+
+    assert "".join(cut_english(english_keystroke)) == english_keystroke
+    return [cut_english(english_keystroke)]
 
 
 class IMEHandler:
