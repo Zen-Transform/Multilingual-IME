@@ -1,3 +1,4 @@
+from pathlib import Path
 import sqlite3
 
 from .trie import modified_levenshtein_distance
@@ -10,6 +11,9 @@ MAX_LEVENSHTEIN_DISTANCE = 2
 
 class KeystrokeMappingDB:
     def __init__(self, db_path: str):
+        if not pathlib.Path(db_path).exists():
+            raise FileNotFoundError(f"Database file {db_path} not found")
+
         self._conn = sqlite3.connect(db_path)
         self._cursor = self._conn.cursor()
         self._conn.create_function("levenshtein", 2, modified_levenshtein_distance)
@@ -42,7 +46,7 @@ class KeystrokeMappingDB:
             list: A list of **tuples (keystroke, word, frequency)** containing the closest words
         """
 
-        for i in range(MAX_LEVENSHTEIN_DISTANCE):
+        for i in range(MAX_LEVENSHTEIN_DISTANCE + 1):
             result = self.fuzzy_get(keystroke, i)
             if result:
                 return result
@@ -76,6 +80,18 @@ class KeystrokeMappingDB:
     def __del__(self):
         self._conn.close()
 
+    def keystroke_exists(self, keystroke: str) -> bool:
+        return bool(self.get(keystroke))
+
+    def word_to_keystroke(self, word: str) -> str:
+        self._cursor.execute(
+            "SELECT keystroke FROM keystroke_map WHERE word = ?", (word,)
+        )
+        if word := self._cursor.fetchone():
+            return word[0]
+        else:
+            return None
+
 
 import pathlib
 
@@ -85,4 +101,10 @@ if __name__ == "__main__":
     )
 
     while True:
-        print(db.get_closest(input("Enter keystroke: ")))
+        # key = input("Enter keystroke: ")
+        # print("Exist", db.keystroke_exists(key))
+        # print("Closest", db.get_closest(key))
+        word = input("Enter word: ")
+        print("Word to keystroke", db.word_to_keystroke(word))
+
+    #     print(db.get_closest(input("Enter keystroke: ")))
