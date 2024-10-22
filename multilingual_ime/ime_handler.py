@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from itertools import chain
 
+from .ime_detector import IMEDetectorOneHot
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
 from .candidate import CandidateWord, Candidate
@@ -150,6 +151,30 @@ class IMEHandler:
             / "src"
             / "keystroke_mapping_dictionary"
             / "english_dict_with_frequency.json"
+        )
+        self._bopomofo_detector = IMEDetectorOneHot(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_model_bopomofo_2024-10-13.pth"
+        )
+        self._eng_detector = IMEDetectorOneHot(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_model_english_2024-10-13.pth"
+        )
+        self._cangjie_detector = IMEDetectorOneHot(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_model_cangjie_2024-10-13.pth"
+        )
+        self._pinyin_detector = IMEDetectorOneHot(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_model_pinyin_2024-10-13.pth"
         )
         self._separator = IMESeparator(use_cuda=False)
 
@@ -325,22 +350,12 @@ class IMEHandler:
 
     @lru_cache_with_doc(maxsize=128)
     def _get_ime_candidates(self, token: str) -> list[Candidate]:
-        candidates = []
 
-        for method in ["bopomofo", "cangjie", "pinyin", "english"]:
-            if method == "bopomofo":
-                db = self.bopomofo_word_db
-            elif method == "cangjie":
-                db = self.cangjie_word_db
-            elif method == "pinyin":
-                db = self.pinyin_word_db
-            elif method == "english":
-                db = self.english_word_db
-            else:
-                raise ValueError("Invalid method: " + method)
-
+        def get_candidates_from_db(
+            token: str, db: KeystrokeMappingDB, method: str
+        ) -> list[Candidate]:
+            candidates = []
             result = db.get_closest(token)
-
             candidates.extend(
                 [
                     Candidate(
@@ -354,6 +369,27 @@ class IMEHandler:
                     for key, word, frequency in result
                 ]
             )
+            return candidates
+
+        assert token, "Token should not be empty"
+
+        candidates = []
+        if self._bopomofo_detector.predict(token):
+            db = self.bopomofo_word_db
+            candidates.extend(get_candidates_from_db(token, db, "bopomofo"))
+        if self._cangjie_detector.predict(token):
+            db = self.cangjie_word_db
+            candidates.extend(get_candidates_from_db(token, db, "cangjie"))
+        if self._pinyin_detector.predict(token):
+            db = self.pinyin_word_db
+            candidates.extend(get_candidates_from_db(token, db, "pinyin"))
+        if self._eng_detector.predict(token):
+            db = self.english_word_db
+            candidates.extend(get_candidates_from_db(token, db, "english"))
+        if not candidates:  # If no candidates found, search in english db
+            db = self.english_word_db
+            candidates.extend(get_candidates_from_db(token, db, "english"))
+
         return candidates
 
     def get_candidate(self, keystroke: str, context: str = "") -> list[Candidate]:
