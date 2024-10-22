@@ -1,0 +1,88 @@
+import sqlite3
+
+from .trie import modified_levenshtein_distance
+from .core.custom_decorators import lru_cache_with_doc
+
+# from fuzzywuzzy import fuzz
+
+MAX_LEVENSHTEIN_DISTANCE = 2
+
+
+class KeystrokeMappingDB:
+    def __init__(self, db_path: str):
+        self._conn = sqlite3.connect(db_path)
+        self._cursor = self._conn.cursor()
+        self._conn.create_function("levenshtein", 2, modified_levenshtein_distance)
+
+    def get(self, keystroke: str) -> list[str]:
+        self._cursor.execute(
+            "SELECT keystroke, word, frequency FROM keystroke_map WHERE keystroke = ?",
+            (keystroke,),
+        )
+        return self._cursor.fetchall()
+
+    def fuzzy_get(
+        self, keystroke: str, max_distance: int = MAX_LEVENSHTEIN_DISTANCE
+    ) -> list[str]:
+        self._cursor.execute(
+            f"SELECT keystroke, word, frequency FROM keystroke_map WHERE levenshtein(keystroke, ?) <= {max_distance}",
+            (keystroke,),
+        )
+        return self._cursor.fetchall()
+
+    @lru_cache_with_doc(maxsize=128)
+    def get_closest(self, keystroke: str) -> list[tuple[str, str, int]]:
+        """
+        Get the closest words to the given keystroke.
+
+        Args:
+            keystroke (str): The keystroke to search for
+
+        Returns:
+            list: A list of **tuples (keystroke, word, frequency)** containing the closest words
+        """
+
+        for i in range(MAX_LEVENSHTEIN_DISTANCE):
+            result = self.fuzzy_get(keystroke, i)
+            if result:
+                return result
+        return []
+
+    def create_table(self):
+        self._cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS keystroke_map (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                keystroke TEXT,
+                word TEXT,
+                frequency INTEGER
+            )
+            """
+        )
+        self._conn.commit()
+
+    def insert(self, keystroke: str, word: str, frequency: int):
+        if (keystroke, word, frequency) not in self.get(keystroke):
+            self._cursor.execute(
+                "INSERT INTO keystroke_map (keystroke, word, frequency) VALUES (?, ?, ?)",
+                (keystroke, word, frequency),
+            )
+            self._conn.commit()
+
+    def insert_many(self, data: list[tuple[str, str, int]]):
+        for keystroke, word, frequency in data:
+            self.insert(keystroke, word, frequency)
+
+    def __del__(self):
+        self._conn.close()
+
+
+import pathlib
+
+if __name__ == "__main__":
+    db = KeystrokeMappingDB(
+        pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
+    )
+
+    while True:
+        print(db.get_closest(input("Enter keystroke: ")))
