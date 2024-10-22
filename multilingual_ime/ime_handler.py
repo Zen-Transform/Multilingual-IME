@@ -5,8 +5,10 @@ from itertools import chain
 
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
-from .candidate import CandidateWord
-from .core.custom_decorators import not_implemented, lru_cache_with_doc
+from .candidate import CandidateWord, Candidate
+from .core.custom_decorators import not_implemented, lru_cache_with_doc, deprecated
+from .keystroke_map_db import KeystrokeMappingDB
+from .trie import modified_levenshtein_distance
 
 
 def custom_tokenizer_bopomofo(bopomofo_keystroke: str) -> list[list[str]]:
@@ -102,7 +104,7 @@ def custom_tokenizer_pinyin(pinyin_keystroke: str) -> list[list[str]]:
     total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=False))
     for ans in total_ans:
         assert "".join(ans) == pinyin_keystroke
-    total_ans.extend(cut_pinyin_with_error_correction(pinyin_keystroke))
+    # total_ans.extend(cut_pinyin_with_error_correction(pinyin_keystroke))
 
     return total_ans
 
@@ -151,6 +153,20 @@ class IMEHandler:
         )
         self._separator = IMESeparator(use_cuda=False)
 
+        self.bopomofo_word_db = KeystrokeMappingDB(
+            Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
+        )
+        self.cangjie_word_db = KeystrokeMappingDB(
+            Path(__file__).parent / "src" / "cangjie_keystroke_map.db"
+        )
+        self.pinyin_word_db = KeystrokeMappingDB(
+            Path(__file__).parent / "src" / "pinyin_keystroke_map.db"
+        )
+        self.english_word_db = KeystrokeMappingDB(
+            Path(__file__).parent / "src" / "english_keystroke_map.db"
+        )
+
+    @deprecated
     def _get_candidate_words(
         self, keystroke: str, prev_context: str = ""
     ) -> list[list[CandidateWord]]:
@@ -167,6 +183,7 @@ class IMEHandler:
         )
         return candidate_sentences
 
+    @deprecated
     def _construct_sentence(self, separate_way) -> list[list[CandidateWord]]:
         logical_sentence = []
         for method, keystroke in separate_way:
@@ -229,25 +246,183 @@ class IMEHandler:
     def _greedy_phrase_search(self, logical_sentence, prev_context):
         pass
 
+    @deprecated
     def get_candidate(self, keystroke: str, prev_context: str = "") -> list[str]:
         result = self._get_candidate_words(keystroke, prev_context)
         best_logical_sentence = result[0]["sentence"]
         return self._construct_sentence_to_words(best_logical_sentence)
 
+    @not_implemented
+    def _get_candiate_list(
+        self, keystroke: str, context: str, num_of_candidates: int
+    ) -> list[Candidate]:  #: fix undefine output
+        pass
+
+    def _reconstruct_sentence(self, keystroke: str, token_pool: set) -> list[list[str]]:
+        """
+        Reconstruct the sentence from the keystroke.
+
+        Args:
+
+                keystroke (str): The keystroke to search for
+        Returns:
+
+                list: A list of **tuples (token, method)** containing the possible tokens
+
+        """
+
+        def dp_search(keystroke: str) -> list[list[str]]:
+            if not keystroke:
+                return [[]]
+
+            if keystroke in token_pool:
+                return [[keystroke]]
+
+            ans = []
+            for token_str in token_pool:
+                if keystroke.startswith(token_str):
+                    ans.extend(
+                        [
+                            [token_str] + sub_ans
+                            for sub_ans in dp_search(keystroke[len(token_str) :])
+                        ]
+                    )
+            return ans
+
+        return dp_search(keystroke)
+
+    def _get_token_pool(self, keystroke: str) -> set[tuple[str, str]]:
+        """
+        Tokenize string of keystroke into token pool.
+
+        Args:
+
+            keystroke (str): The keystroke to search for
+        Returns:
+            set: A set of **token(str)** containing the possible tokens
+
+        """
+        token_pool = set()
+
+        separate_possibilities = self._separator.separate(keystroke)
+        for separate_way in separate_possibilities:
+            for ime_method, keystroke in separate_way:
+                if ime_method == "bopomofo":
+                    token_ways = custom_tokenizer_bopomofo(keystroke)
+                elif ime_method == "cangjie":
+                    token_ways = custom_tokenizer_cangjie(keystroke)
+                elif ime_method == "english":
+                    token_ways = custom_tokenizer_english(keystroke)
+                elif ime_method == "pinyin":
+                    token_ways = custom_tokenizer_pinyin(keystroke)
+                else:
+                    raise ValueError("Invalid method: " + ime_method)
+
+                for ways in token_ways:
+                    for token in ways:
+                        token_pool.add(token)
+        return token_pool
+
+    @lru_cache_with_doc(maxsize=128)
+    def _get_ime_candidates(self, token: str) -> list[Candidate]:
+        candidates = []
+
+        for method in ["bopomofo", "cangjie", "pinyin", "english"]:
+            if method == "bopomofo":
+                db = self.bopomofo_word_db
+            elif method == "cangjie":
+                db = self.cangjie_word_db
+            elif method == "pinyin":
+                db = self.pinyin_word_db
+            elif method == "english":
+                db = self.english_word_db
+            else:
+                raise ValueError("Invalid method: " + method)
+
+            result = db.get_closest(token)
+
+            candidates.extend(
+                [
+                    Candidate(
+                        word,
+                        key,
+                        frequency,
+                        token,
+                        modified_levenshtein_distance(key, token),
+                        method,
+                    )
+                    for key, word, frequency in result
+                ]
+            )
+        return candidates
+
+    def get_candidate(self, keystroke: str, context: str = "") -> list[Candidate]:
+        start_time = time.time()
+        token_pool = self._get_token_pool(keystroke)
+        print("Token pool time: ", time.time() - start_time)
+        start_time = time.time()
+        possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
+        print("Reconstruct sentence time: ", time.time() - start_time)
+
+        start_time = time.time()
+        result = []
+        for sentence in possible_sentences:
+            ans_sentence = []
+            ans_sentence_distance = 0
+            for token in sentence:
+                assert (
+                    token in token_pool
+                ), f"Token '{token}' not in token pool {token_pool}"
+
+                start_time2 = time.time()
+                candidates = self._get_ime_candidates(token)
+                print(
+                    "Get ime candidate time: {}, {}".format(
+                        time.time() - start_time2, token
+                    )
+                )
+                ans_sentence.append(candidates)
+                ans_sentence_distance += min(
+                    [candidate.distance for candidate in candidates]
+                    if candidates
+                    else [0]
+                )
+
+            result.append({"sentence": ans_sentence, "distance": ans_sentence_distance})
+
+        result = sorted(result, key=lambda x: x["distance"])
+        print("Get candidate time: ", time.time() - start_time)
+        return result
+
 
 if __name__ == "__main__":
-    context = ""
+    # context = ""
+    # user_keystroke = "t g3bjo4dk4apple wathc"
+    # start_time = time.time()
+    # my_IMEHandler = IMEHandler()
+    # print("Initialization time: ", time.time() - start_time)
+    # avg_time, num_of_test = 0, 0
+    # while True:
+    #     user_keystroke = input("Enter keystroke: ")
+    #     num_of_test += 1
+    #     start_time = time.time()
+    #     result = my_IMEHandler.get_candidate(user_keystroke, context)
+    #     end_time = time.time()
+    #     avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
+    #     print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
+    #     print(result)
+
     user_keystroke = "t g3bjo4dk4apple wathc"
-    start_time = time.time()
     my_IMEHandler = IMEHandler()
-    print("Initialization time: ", time.time() - start_time)
-    avg_time, num_of_test = 0, 0
-    while True:
-        user_keystroke = input("Enter keystroke: ")
-        num_of_test += 1
-        start_time = time.time()
-        result = my_IMEHandler.get_candidate(user_keystroke, context)
-        end_time = time.time()
-        avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
-        print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
-        print(result)
+    results = my_IMEHandler.get_candidate(user_keystroke)
+    for result in results:
+        ans_sentence = result["sentence"]
+        ans_sentence_distance = result["distance"]
+        print("----------------")
+        print(f"Distance: {ans_sentence_distance}")
+        for token in ans_sentence:
+            print("= ", end="")
+            for candidate in token:
+                print(candidate.word, end=" ")
+            print()
+        print("----------------")
