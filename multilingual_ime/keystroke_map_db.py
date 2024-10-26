@@ -6,7 +6,7 @@ from .core.custom_decorators import lru_cache_with_doc
 
 # from fuzzywuzzy import fuzz
 
-MAX_LEVENSHTEIN_DISTANCE = 2
+MAX_LEVENSHTEIN_DISTANCE = 1
 
 
 class KeystrokeMappingDB:
@@ -25,6 +25,7 @@ class KeystrokeMappingDB:
         )
         return self._cursor.fetchall()
 
+    @lru_cache_with_doc(maxsize=128)
     def fuzzy_get(
         self, keystroke: str, max_distance: int = MAX_LEVENSHTEIN_DISTANCE
     ) -> list[str]:
@@ -83,6 +84,19 @@ class KeystrokeMappingDB:
     def keystroke_exists(self, keystroke: str) -> bool:
         return bool(self.get(keystroke))
 
+    def is_word_within_distance(
+        self, keystroke: str, distance: int = MAX_LEVENSHTEIN_DISTANCE
+    ) -> bool:
+        return self.closest_word_distance(keystroke) <= distance
+
+    def closest_word_distance(self, keystroke: str) -> int:
+        distance = 0
+        while True:
+            if self.fuzzy_get(keystroke, distance):
+                return distance
+            else:
+                distance += 1
+
     def word_to_keystroke(self, word: str) -> str:
         self._cursor.execute(
             "SELECT keystroke FROM keystroke_map WHERE word = ?", (word,)
@@ -99,12 +113,6 @@ if __name__ == "__main__":
     db = KeystrokeMappingDB(
         pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
     )
-
-    while True:
-        # key = input("Enter keystroke: ")
-        # print("Exist", db.keystroke_exists(key))
-        # print("Closest", db.get_closest(key))
-        word = input("Enter word: ")
-        print("Word to keystroke", db.word_to_keystroke(word))
-
-    #     print(db.get_closest(input("Enter keystroke: ")))
+    print(db.get_closest("u04counsel"))
+    print(db.closest_word_distance("u04counsel"))
+    print(db.is_word_within_distance("u04counsel"))
