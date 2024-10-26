@@ -101,7 +101,7 @@ def custom_tokenizer_pinyin(pinyin_keystroke: str) -> list[list[str]]:
 
     total_ans = []
     total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=True))
-    total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=False))
+    # total_ans.extend(cut_pinyin(pinyin_keystroke, is_intact=False))
     for ans in total_ans:
         assert "".join(ans) == pinyin_keystroke
     # total_ans.extend(cut_pinyin_with_error_correction(pinyin_keystroke))
@@ -123,6 +123,19 @@ def custom_tokenizer_english(english_keystroke: str) -> list[list[str]]:
 
     assert "".join(cut_english(english_keystroke)) == english_keystroke
     return [cut_english(english_keystroke)]
+
+
+def decide_tokenizer(ime_type: str, text: str) -> list[str]:
+    if ime_type == "bopomofo":
+        return custom_tokenizer_bopomofo(text)[0]
+    elif ime_type == "cangjie":
+        return custom_tokenizer_cangjie(text)[0]
+    elif ime_type == "pinyin":
+        return custom_tokenizer_pinyin(text)[0]
+    elif ime_type == "english":
+        return custom_tokenizer_english(text)[0]
+    else:
+        raise ValueError(f"Unknown ime_type: {ime_type}")
 
 
 class IMEHandler:
@@ -275,9 +288,6 @@ class IMEHandler:
             if not keystroke:
                 return [[]]
 
-            if keystroke in token_pool:
-                return [[keystroke]]
-
             ans = []
             for token_str in token_pool:
                 if keystroke.startswith(token_str):
@@ -287,9 +297,14 @@ class IMEHandler:
                             for sub_ans in dp_search(keystroke[len(token_str) :])
                         ]
                     )
+
+            if keystroke in token_pool:
+                ans.append([keystroke])
             return ans
 
-        return dp_search(keystroke)
+        result = dp_search(keystroke)
+        unique_result = list(map(list, set(map(tuple, result))))
+        return unique_result
 
     def _get_token_pool(self, keystroke: str) -> set[tuple[str, str]]:
         """
@@ -354,17 +369,11 @@ class IMEHandler:
                     for key, word, frequency in result
                 ]
             )
-        return candidates
+        return sorted(candidates, key=lambda x: x.distance)
 
     def get_candidate(self, keystroke: str, context: str = "") -> list[Candidate]:
-        start_time = time.time()
         token_pool = self._get_token_pool(keystroke)
-        print("Token pool time: ", time.time() - start_time)
-        start_time = time.time()
         possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
-        print("Reconstruct sentence time: ", time.time() - start_time)
-
-        start_time = time.time()
         result = []
         for sentence in possible_sentences:
             ans_sentence = []
@@ -374,13 +383,7 @@ class IMEHandler:
                     token in token_pool
                 ), f"Token '{token}' not in token pool {token_pool}"
 
-                start_time2 = time.time()
                 candidates = self._get_ime_candidates(token)
-                print(
-                    "Get ime candidate time: {}, {}".format(
-                        time.time() - start_time2, token
-                    )
-                )
                 ans_sentence.append(candidates)
                 ans_sentence_distance += min(
                     [candidate.distance for candidate in candidates]
@@ -391,38 +394,30 @@ class IMEHandler:
             result.append({"sentence": ans_sentence, "distance": ans_sentence_distance})
 
         result = sorted(result, key=lambda x: x["distance"])
-        print("Get candidate time: ", time.time() - start_time)
+
+        # Filter out none best result
+        filter_out_none_best_result = True
+        if filter_out_none_best_result:
+            best_distance = result[0]["distance"]
+            result = [r for r in result if r["distance"] <= best_distance]
+
+
         return result
 
 
 if __name__ == "__main__":
-    # context = ""
-    # user_keystroke = "t g3bjo4dk4apple wathc"
-    # start_time = time.time()
-    # my_IMEHandler = IMEHandler()
-    # print("Initialization time: ", time.time() - start_time)
-    # avg_time, num_of_test = 0, 0
-    # while True:
-    #     user_keystroke = input("Enter keystroke: ")
-    #     num_of_test += 1
-    #     start_time = time.time()
-    #     result = my_IMEHandler.get_candidate(user_keystroke, context)
-    #     end_time = time.time()
-    #     avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
-    #     print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
-    #     print(result)
-
+    context = ""
     user_keystroke = "t g3bjo4dk4apple wathc"
+    start_time = time.time()
     my_IMEHandler = IMEHandler()
-    results = my_IMEHandler.get_candidate(user_keystroke)
-    for result in results:
-        ans_sentence = result["sentence"]
-        ans_sentence_distance = result["distance"]
-        print("----------------")
-        print(f"Distance: {ans_sentence_distance}")
-        for token in ans_sentence:
-            print("= ", end="")
-            for candidate in token:
-                print(candidate.word, end=" ")
-            print()
-        print("----------------")
+    print("Initialization time: ", time.time() - start_time)
+    avg_time, num_of_test = 0, 0
+    while True:
+        user_keystroke = input("Enter keystroke: ")
+        num_of_test += 1
+        start_time = time.time()
+        result = my_IMEHandler.get_candidate(user_keystroke, context)
+        end_time = time.time()
+        avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
+        print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
+        print(result)

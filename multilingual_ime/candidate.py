@@ -1,3 +1,6 @@
+from colorama import Fore, Style
+
+
 class CandidateWord:
     def __init__(self, word, keystrokes, word_frequency):
         self.word = word
@@ -64,10 +67,25 @@ class Candidate:
             "ime_method": self.ime_method,
         }
 
-    # def __setattr__(self, name, value):
-    #     if hasattr(self, name):
-    #         raise AttributeError(f"Cannot set attribute {name} to {value}, {__class__.__name__} is an immutable object")
-    
+    def __repr__(self):
+        result = ""
+        if self.ime_method == "english":
+            result = f"{Fore.GREEN}{self.word}{Style.RESET_ALL}"
+        elif self.ime_method == "cangjie":
+            result = f"{Fore.YELLOW}{self.word}{Style.RESET_ALL}"
+        elif self.ime_method == "bopomofo":
+            result = f"{Fore.CYAN}{self.word}{Style.RESET_ALL}"
+        elif self.ime_method == "pinyin":
+            result = f"{Fore.MAGENTA}{self.word}{Style.RESET_ALL}"
+        else:
+            result = f"{Fore.WHITE}{self.word}{Style.RESET_ALL}"
+
+        if self.distance != 0:
+            result = f"{Fore.RED}{self.word}{Style.RESET_ALL}"
+
+        return result
+
+
 if __name__ == "__main__":
     cand = Candidate("word", "keystrokes", 1, "user_key", 1, "method")
     cand1 = Candidate("word", "keystrokes", 1, "user_key", 1, "method")
@@ -75,4 +93,3 @@ if __name__ == "__main__":
     print(cand1.to_dict())
     cand1.word = "new_word1"
     cand.word = "new_word"
-
