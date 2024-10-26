@@ -138,6 +138,9 @@ def decide_tokenizer(ime_type: str, text: str) -> list[str]:
         raise ValueError(f"Unknown ime_type: {ime_type}")
 
 
+MAX_TOKEN_LEVENSHTEIN_DISTANCE = 2
+
+
 class IMEHandler:
     def __init__(self) -> None:
         self._bopomofo_converter = ChineseIMEConverter(
@@ -338,22 +341,22 @@ class IMEHandler:
                         token_pool.add(token)
         return token_pool
 
+    def _is_valid_token(self, token: str) -> bool:
+        if not token:
+            return False
+        for ime_method in ["bopomofo", "cangjie", "pinyin", "english"]:
+            db = self._get_ime_word_db(ime_method)
+            if db.closest_word_distance(token) <= MAX_TOKEN_LEVENSHTEIN_DISTANCE:
+                return True
+
+        return False
+
     @lru_cache_with_doc(maxsize=128)
-    def _get_ime_candidates(self, token: str) -> list[Candidate]:
+    def _get_token_candidates(self, token: str) -> list[Candidate]:
         candidates = []
 
         for method in ["bopomofo", "cangjie", "pinyin", "english"]:
-            if method == "bopomofo":
-                db = self.bopomofo_word_db
-            elif method == "cangjie":
-                db = self.cangjie_word_db
-            elif method == "pinyin":
-                db = self.pinyin_word_db
-            elif method == "english":
-                db = self.english_word_db
-            else:
-                raise ValueError("Invalid method: " + method)
-
+            db = self._get_ime_word_db(method)
             result = db.get_closest(token)
 
             candidates.extend(
@@ -369,29 +372,52 @@ class IMEHandler:
                     for key, word, frequency in result
                 ]
             )
-        return sorted(candidates, key=lambda x: x.distance)
 
-    def get_candidate(self, keystroke: str, context: str = "") -> list[Candidate]:
+        candidates = sorted(candidates, key=lambda x: x.distance)
+        assert len(candidates) > 0, f"No candidates found for token '{token}'"
+        return candidates
+
+    def _get_ime_word_db(self, method: str) -> KeystrokeMappingDB:
+        if method == "bopomofo":
+            return self.bopomofo_word_db
+        elif method == "cangjie":
+            return self.cangjie_word_db
+        elif method == "pinyin":
+            return self.pinyin_word_db
+        elif method == "english":
+            return self.english_word_db
+        else:
+            raise ValueError("Invalid method: " + method)
+
+    @lru_cache_with_doc(maxsize=128)
+    def _closest_word_distance(self, token: str) -> int:
+        min_distance = float("inf")
+        for method in ["bopomofo", "cangjie", "pinyin", "english"]:
+            db = self._get_ime_word_db(method)
+            method_distance = db.closest_word_distance(token)
+            min_distance = min(min_distance, method_distance)
+
+        assert min_distance != float(
+            "inf"
+        ), f"Distancd of a token should not be infinity"
+        return min_distance
+
+    def get_candidate_sentences(self, keystroke: str, context: str = "") -> list[dict]:
         token_pool = self._get_token_pool(keystroke)
+        token_pool = set(
+            [token for token in token_pool if self._is_valid_token(token)]
+        )  # Filter out invalid token
         possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
+
         result = []
         for sentence in possible_sentences:
-            ans_sentence = []
             ans_sentence_distance = 0
             for token in sentence:
                 assert (
                     token in token_pool
                 ), f"Token '{token}' not in token pool {token_pool}"
-
-                candidates = self._get_ime_candidates(token)
-                ans_sentence.append(candidates)
-                ans_sentence_distance += min(
-                    [candidate.distance for candidate in candidates]
-                    if candidates
-                    else [0]
-                )
-
-            result.append({"sentence": ans_sentence, "distance": ans_sentence_distance})
+                ans_sentence_distance += self._closest_word_distance(token)
+            result.append({"sentence": sentence, "distance": ans_sentence_distance})
 
         result = sorted(result, key=lambda x: x["distance"])
 
@@ -400,7 +426,6 @@ class IMEHandler:
         if filter_out_none_best_result:
             best_distance = result[0]["distance"]
             result = [r for r in result if r["distance"] <= best_distance]
-
 
         return result
 
@@ -416,7 +441,7 @@ if __name__ == "__main__":
         user_keystroke = input("Enter keystroke: ")
         num_of_test += 1
         start_time = time.time()
-        result = my_IMEHandler.get_candidate(user_keystroke, context)
+        result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
         end_time = time.time()
         avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
         print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
