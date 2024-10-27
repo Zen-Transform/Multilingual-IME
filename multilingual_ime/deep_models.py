@@ -20,3 +20,22 @@ class LanguageDetectorModel(nn.Module):
 
     def forward(self, x):
         return self.model(x)
+
+
+class TokenDetectorModel(nn.Module):
+    def __init__(self, input_shape, num_classes):
+        super(TokenDetectorModel, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_shape, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 32),
+            nn.Linear(32, num_classes),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x):
+        return self.model(x)

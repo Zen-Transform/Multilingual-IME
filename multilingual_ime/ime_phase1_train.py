@@ -15,7 +15,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchmetrics.classification import MulticlassConfusionMatrix, MulticlassAccuracy
 
 from .keystroke_tokenizer import KeystrokeTokenizer
-from .deep_models import LanguageDetectorModel
+from .deep_models import LanguageDetectorModel, TokenDetectorModel
 
 
 class KeystrokeDataset(Dataset):
@@ -47,26 +47,26 @@ TRAIN_VAL_SPLIT_RATIO = 0.8
 MAX_TOKEN_SIZE = 30
 
 # Model Configuration
-MODEL_PREFIX = "one_hot_dl_model"
-LANGUAGE = "cangjie"
+MODEL_PREFIX = "one_hot_dl_token_model"
+LANGUAGE = "pinyin"
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d")
 INPUT_SHAPE = MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length()
 NUM_CLASSES = 2
 MODEL_SAVE_PATH = f".\\models\\{MODEL_PREFIX}_{LANGUAGE}_{TIMESTAMP}.pth"
 
 # Training Configuration
-EPOCHS = 5
+EPOCHS = 10
 BATCH_SIZE = 32
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 SKIP_VALIDATION = False
 
 
 if __name__ == "__main__":
     Train_data_no_error_path = (
-        f".\\Datasets\\Train_Datasets\\labeled_{LANGUAGE}_0_train.txt"
+        f".\\Datasets\\Train_Datasets\\labeled_wlen1_{LANGUAGE}_0_train.txt"
     )
     Train_data_with_error_path = (
-        f".\\Datasets\\Train_Datasets\\labeled_{LANGUAGE}_r0-1_train.txt"
+        f".\\Datasets\\Train_Datasets\\labeled_wlen1_{LANGUAGE}_r0-1_train.txt"
     )
 
     if not os.path.exists(Train_data_no_error_path):
@@ -87,30 +87,31 @@ if __name__ == "__main__":
 
     # format data to one-hot encoding and Tensor
     train_data_tensor = []
-    for train_example in training_datas:
-        keystoke, target = train_example.strip("\n").split("\t")
+    with tqdm(training_datas) as pbar:
+        for train_example in training_datas:
+            keystoke, target = train_example.strip("\n").split("\t")
+            token_ids = KeystrokeTokenizer.token_to_ids(
+                KeystrokeTokenizer.tokenize(keystoke)
+            )
+            token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE
+            token_ids += [0] * (MAX_TOKEN_SIZE - len(token_ids))  # padding
 
-        token_ids = KeystrokeTokenizer.token_to_ids(
-            KeystrokeTokenizer.tokenize(keystoke)
-        )
-        token_ids = token_ids[:MAX_TOKEN_SIZE]  # truncate to MAX_TOKEN_SIZE
-        token_ids += [0] * (MAX_TOKEN_SIZE - len(token_ids))  # padding
+            one_hot_keystrokes = (
+                torch.zeros(MAX_TOKEN_SIZE, KeystrokeTokenizer.key_labels_length())
+                + torch.eye(KeystrokeTokenizer.key_labels_length())[token_ids]
+            )
+            one_hot_keystrokes = one_hot_keystrokes.view(-1)  # flatten
+            one_hot_targets = (
+                torch.tensor([0], dtype=torch.float32)
+                if target == "0"
+                else torch.tensor([1], dtype=torch.float32)
+            )
 
-        one_hot_keystrokes = (
-            torch.zeros(MAX_TOKEN_SIZE, KeystrokeTokenizer.key_labels_length())
-            + torch.eye(KeystrokeTokenizer.key_labels_length())[token_ids]
-        )
-        one_hot_keystrokes = one_hot_keystrokes.view(-1)  # flatten
-        one_hot_targets = (
-            torch.tensor([1, 0], dtype=torch.float32)
-            if target == "0"
-            else torch.tensor([0, 1], dtype=torch.float32)
-        )
-
-        assert (
-            INPUT_SHAPE == list(one_hot_keystrokes.view(-1).shape)[0]
-        ), f"{INPUT_SHAPE} != {list(one_hot_keystrokes.view(-1).shape)[0]}"
-        train_data_tensor.append([one_hot_keystrokes, one_hot_targets])
+            assert (
+                INPUT_SHAPE == list(one_hot_keystrokes.view(-1).shape)[0]
+            ), f"{INPUT_SHAPE} != {list(one_hot_keystrokes.view(-1).shape)[0]}"
+            train_data_tensor.append([one_hot_keystrokes, one_hot_targets])
+            pbar.update(1)
 
     print("Data loaded")
     train_data, val_data = torch.utils.data.random_split(
@@ -122,9 +123,9 @@ if __name__ == "__main__":
     train_data_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
     val_data_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False)
 
-    model = LanguageDetectorModel(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES)
+    model = TokenDetectorModel(input_shape=INPUT_SHAPE, num_classes=1)
     model.to(DEVICE)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     fig = None
@@ -146,13 +147,16 @@ if __name__ == "__main__":
                 optimizer.zero_grad()
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_Y)
+
                 loss.backward()
                 optimizer.step()
 
-                predictions = torch.argmax(outputs.data, dim=-1)
-                labels = torch.argmax(batch_Y, dim=-1)
-                # print(batch_Y)
-                # print(labels)
+                # predictions = torch.argmax(outputs.data, dim=-1)
+                # labels = torch.argmax(batch_Y, dim=-1)
+                predictions = torch.round(outputs)
+                # print("prediction",predictions)
+                # print("labels",batch_Y)
+                labels = batch_Y
                 batch_loss = loss.item()
                 batch_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(DEVICE)
 
@@ -186,8 +190,10 @@ if __name__ == "__main__":
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_Y)
 
-                    predictions = torch.argmax(outputs.data, dim=-1)
-                    labels = torch.argmax(batch_Y, dim=-1)
+                    # predictions = torch.argmax(outputs.data, dim=-1)
+                    # labels = torch.argmax(batch_Y, dim=-1)
+                    predictions = torch.round(outputs)
+                    labels = batch_Y
                     batch_val_loss = loss.item()
                     batch_val_acc = MulticlassAccuracy(num_classes=NUM_CLASSES).to(
                         DEVICE
