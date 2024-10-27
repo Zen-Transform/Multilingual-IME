@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from itertools import chain
 
+from .ime_detector import IMETokenDetectorDL
 from .ime_separator import IMESeparator
 from .ime_converter import ChineseIMEConverter, EnglishIMEConverter
 from .candidate import CandidateWord, Candidate
@@ -182,6 +183,31 @@ class IMEHandler:
             Path(__file__).parent / "src" / "english_keystroke_map.db"
         )
 
+        self._bopomofo_token_detector = IMETokenDetectorDL(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_token_model_bopomofo_2024-10-27.pth"
+        )
+        self._cangjie_token_detector = IMETokenDetectorDL(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_token_model_cangjie_2024-10-27.pth"
+        )
+        self._pinyin_token_detector = IMETokenDetectorDL(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_token_model_pinyin_2024-10-27.pth"
+        )
+        self._english_token_detector = IMETokenDetectorDL(
+            Path(__file__).parent
+            / "src"
+            / "models"
+            / "one_hot_dl_token_model_english_2024-10-27.pth"
+        )
+
     @deprecated
     def _get_candidate_words(
         self, keystroke: str, prev_context: str = ""
@@ -341,13 +367,19 @@ class IMEHandler:
                         token_pool.add(token)
         return token_pool
 
+    @lru_cache_with_doc(maxsize=128)
     def _is_valid_token(self, token: str) -> bool:
         if not token:
             return False
-        for ime_method in ["bopomofo", "cangjie", "pinyin", "english"]:
-            db = self._get_ime_word_db(ime_method)
-            if db.closest_word_distance(token) <= MAX_TOKEN_LEVENSHTEIN_DISTANCE:
-                return True
+
+        if self._bopomofo_token_detector.predict(token):
+            return True
+        if self._cangjie_token_detector.predict(token):
+            return True
+        if self._pinyin_token_detector.predict(token):
+            return True
+        if self._english_token_detector.predict(token):
+            return True
 
         return False
 
@@ -389,25 +421,43 @@ class IMEHandler:
         else:
             raise ValueError("Invalid method: " + method)
 
+    def _get_ime_token_detector(self, method: str) -> IMETokenDetectorDL:
+        if method == "bopomofo":
+            return self._bopomofo_token_detector
+        elif method == "cangjie":
+            return self._cangjie_token_detector
+        elif method == "pinyin":
+            return self._pinyin_token_detector
+        elif method == "english":
+            return self._english_token_detector
+        else:
+            raise ValueError("Invalid method: " + method)
+
     @lru_cache_with_doc(maxsize=128)
     def _closest_word_distance(self, token: str) -> int:
         min_distance = float("inf")
+
         for method in ["bopomofo", "cangjie", "pinyin", "english"]:
+            if not self._get_ime_token_detector(method).predict(token):
+                continue
+
             db = self._get_ime_word_db(method)
             method_distance = db.closest_word_distance(token)
             min_distance = min(min_distance, method_distance)
 
-        assert min_distance != float(
-            "inf"
-        ), f"Distancd of a token should not be infinity"
         return min_distance
 
     def get_candidate_sentences(self, keystroke: str, context: str = "") -> list[dict]:
+
+        start_time = time.time()
         token_pool = self._get_token_pool(keystroke)
+        print("Token pool time: ", time.time() - start_time)
         token_pool = set(
             [token for token in token_pool if self._is_valid_token(token)]
         )  # Filter out invalid token
+        print("filter out invalid token time: ", time.time() - start_time)
         possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
+        print("Reconstruct sentence time: ", time.time() - start_time)
 
         result = []
         for sentence in possible_sentences:
