@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Create Cleaned Dataset from existing plain text dataset
     mode = "clean"
     group = [("chinese", "Chinese_WebCrawlData_cc100.txt"), ("english", "English_multi_news.txt")]
-    skip_clean = False
+    skip_clean = True
 
     for language, src_file in group:
         job_list.append({
@@ -32,8 +32,8 @@ if __name__ == "__main__":
     mode = "split_word"
     group = [("ch", "Chinese_WebCrawlData_cc100-ch.txt"), ("en", "English_multi_news-ch.txt")]
     min_split_word_len = 1
-    max_split_word_len = 3
-    skip_split_word = False
+    max_split_word_len = 1
+    skip_split_word = True
 
     output_file_name_list = []
     for language, src_file in group:
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         
     # Split Plain Text Dataset into Train and Test Dataset
     mode = "split"
-    src_files = ["wlen1-3_cc100.txt", "wlen1-3_English_multi.txt"]
+    src_files = ["wlen1-1_cc100.txt", "wlen1-1_English_multi.txt"]
     train_test_split_ratio = 0.5
     skip_split = False
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # Create KeyStroke Dataset from existing plain text dataset
     mode = "convert"
-    src_files = ["wlen1-3_cc100_train.txt", "wlen1-3_cc100_test.txt"]
+    src_files = ["wlen1-1_cc100_train.txt", "wlen1-1_cc100_test.txt"]
     convert_types = ["bopomofo", "cangjie", "pinyin"]
     skip_convert = False
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
                 })
 
     mode = "convert"
-    src_files = ["wlen1-3_English_multi_train.txt", "wlen1-3_English_multi_test.txt"]  # todo: fix this
+    src_files = ["wlen1-1_English_multi_train.txt", "wlen1-1_English_multi_test.txt"]  # todo: fix this
     convert_types = ["english"]
     for src_file in src_files:
         for convert_type in convert_types:
@@ -176,7 +176,7 @@ if __name__ == "__main__":
                 "description": f"Merge all {prefix} files in training datasets and label them with {target_language}",
                 "prefix": prefix,
                 "input_file_paths": TRAIN_DATASET_PATH,
-                "output_file_path": TRAIN_DATASET_PATH + f"labeled_{target_language}_{prefix}_train.txt",
+                "output_file_path": TRAIN_DATASET_PATH + f"labeled_wlen1_{target_language}_{prefix}_train.txt",
                 "language": target_language,
                 "status": "done" if skip_merge else None
                 })
@@ -185,7 +185,7 @@ if __name__ == "__main__":
                 "description": f"Merge all {prefix} files in testing datasets and label them with {target_language}",
                 "prefix": prefix,
                 "input_file_paths": TEST_DATASET_PATH,
-                "output_file_path": TEST_DATASET_PATH + f"labeled_{target_language}_{prefix}_test.txt",
+                "output_file_path": TEST_DATASET_PATH + f"labeled_wlen1_{target_language}_{prefix}_test.txt",
                 "language": target_language,
                 "status": "done" if skip_merge else None
                 })
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     # create inverse dataset
     mode = "gen_reverse"
     target_languages = ["bopomofo", "cangjie", "pinyin", "english"]
-    skip_gen_reverse = False
+    skip_gen_reverse = True
 
     for target_language in target_languages:
         job_list.append({
@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
     mode = "gen_redundant"
     target_languages = ["bopomofo", "cangjie", "pinyin", "english"]
-    skip_gen_redundant = False
+    skip_gen_redundant = True
     for target_language in target_languages:
         job_list.append({
             "mode": mode,

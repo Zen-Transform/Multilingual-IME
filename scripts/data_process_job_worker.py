@@ -34,24 +34,26 @@ def split_by_word(input_file_path, output_file_path, min_split_word_len, max_spl
             input_string = "".join(lines)
             words = [word for line in input_string.split('\n') for word in line.split(' ')]
             i = 0
-            with tqdm(total=len(words)) as pbar:
-                while i < len(words):
-                    output_lines.append(' '.join(words[i:i+1]))
-                    output_lines.append(' '.join(words[i+1:i+3]))
-                    output_lines.append(' '.join(words[i+3:i+6]))
-                    pbar.update(6)
-                    i += 6
+            # with tqdm(total=len(words)) as pbar:
+            #     while i < len(words):
+            #         output_lines.append(' '.join(words[i:i+1]))
+            #         output_lines.append(' '.join(words[i+1:i+3]))
+            #         output_lines.append(' '.join(words[i+3:i+6]))
+            #         pbar.update(6)
+            #         i += 6
+            output_lines.extend(words)
         elif language == "ch":
             joined_lines = "".join(lines).replace("\n", "")
             words = [word for word in joined_lines]
             i = 0
-            with tqdm(total=len(words)) as pbar:
-                while i < len(words):
-                    output_lines.append(''.join(words[i:i+1]))
-                    output_lines.append(''.join(words[i+1:i+3]))
-                    output_lines.append(''.join(words[i+3:i+6]))
-                    pbar.update(6)
-                    i += 6
+            # with tqdm(total=len(words)) as pbar:
+            #     while i < len(words):
+            #         output_lines.append(''.join(words[i:i+1]))
+            #         output_lines.append(''.join(words[i+1:i+3]))
+            #         output_lines.append(''.join(words[i+3:i+6]))
+            #         pbar.update(6)
+            #         i += 6
+            output_lines.extend(words)
         else:
             raise ValueError("Invalid language: " + language)
     
@@ -69,18 +71,20 @@ def cut_keystroke_by(input_file_path, output_file_path, cut_out_len):
 
 def merge_files(input_file_paths, output_file_path, target_language, prefix=""):
     files = os.listdir(input_file_paths)
-    src_file_names = [file for file in files if file.startswith(f"{prefix}_")]
+    src_file_names = [file for file in files if file.startswith(f"{prefix}_") and file.find("_wlen1-1_") != -1]
+    print(src_file_names)
     assert len(src_file_names) == 4
 
+    new_lines = []
     for file_name in tqdm(src_file_names, desc="Processing files"):
         with open(input_file_paths + file_name, "r", encoding="utf-8") as file:
             lines = file.readlines()
             lines = [line.replace("\n", "") for line in lines] # remove the \n in the line
-            new_lines = [line + "\t1" if target_language in file_name else line + "\t0" for line in lines]
+            new_lines.extend([line + "\t1" if target_language in file_name else line + "\t0" for line in lines])
         
-        with open(os.path.join(output_file_path), "a", encoding="utf-8") as file:
-            for line in new_lines:
-                file.write(line + "\n")
+    with open(os.path.join(output_file_path), "w", encoding="utf-8") as file:
+        for line in new_lines:
+            file.write(line + "\n")
 
 def write_list_to_file(file_path: str, lines: list) -> None:
     with open(file_path, "w", encoding="utf-8") as file:
