@@ -1,5 +1,7 @@
 import re
 import time
+import logging
+
 from pathlib import Path
 from itertools import chain
 
@@ -143,7 +145,10 @@ MAX_TOKEN_LEVENSHTEIN_DISTANCE = 2
 
 
 class IMEHandler:
-    def __init__(self) -> None:
+    def __init__(self, verbose_mode: bool = False) -> None:
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
+
         self._bopomofo_converter = ChineseIMEConverter(
             Path(__file__).parent
             / "src"
@@ -451,14 +456,16 @@ class IMEHandler:
 
         start_time = time.time()
         token_pool = self._get_token_pool(keystroke)
-        print("Token pool time: ", time.time() - start_time)
+        self.logger.info(f"Token pool time: {time.time() - start_time}")
+        self.logger.info(f"Token pool: {token_pool}")
         token_pool = set(
             [token for token in token_pool if self._is_valid_token(token)]
         )  # Filter out invalid token
-        print("filter out invalid token time: ", time.time() - start_time)
+        self.logger.info(f"Filter out invalid token time: {time.time() - start_time}")
+        self.logger.info(f"Filtered token pool: {token_pool}")
         possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
-        print("Reconstruct sentence time: ", time.time() - start_time)
-
+        self.logger.info(f"Reconstruct sentence time: {time.time() - start_time}")
+        self.logger.info(f"Possible sentences: {possible_sentences}")
         result = []
         for sentence in possible_sentences:
             ans_sentence_distance = 0
@@ -492,6 +499,7 @@ if __name__ == "__main__":
         num_of_test += 1
         start_time = time.time()
         result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
+        # result = my_IMEHandler._get_token_candidates(user_keystroke)
         end_time = time.time()
         avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
         print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
