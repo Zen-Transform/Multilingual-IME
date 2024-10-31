@@ -17,6 +17,15 @@ class IMEHandler:
 
     @lru_cache_with_doc(maxsize=128)
     def get_token_candidates(self, token: str) -> list[Candidate]:
+        """
+        Get the possible candidates of the token from all IMEs.
+
+        Args:
+            token (str): The token to search for
+        Returns:
+            list: A list of **Candidate** containing the possible candidates
+        """
+
         candidates = []
 
         for ime_type in self.ime_list:
@@ -41,6 +50,19 @@ class IMEHandler:
         return candidates
 
     def get_candidate_sentences(self, keystroke: str, context: str = "") -> list[dict]:
+        """
+        Get the possible combination of tokens that have the least distance to the keystroke.
+
+        Args:
+            keystroke (str): The keystroke to search for
+            context (str): The context to search for
+
+        Returns:
+            list: A list of **dict** containing the possible sentences and their distance.
+                **dict["sentence"]**: list of str, the possible sentence.
+                **dict["distance"]**: int, the distance of the sentence.
+        """
+
         start_time = time.time()
         token_pool = self._get_token_pool(keystroke)
         self.logger.info(f"Token pool time: {time.time() - start_time}")
@@ -73,7 +95,18 @@ class IMEHandler:
 
         return result
 
-    def get_best_sentence(self, keystroke: str, context: str = "") -> dict:
+    def get_best_sentence(self, keystroke: str, context: str = "") -> str:
+        """
+        Get the best sentence in words based on the keystroke and context.
+
+        Args:
+            keystroke (str): The keystroke to search for
+            context (str): The context to search for
+        Returns:
+            str: The best sentence of words
+
+        """
+
         best_candidate_sentences = self.get_candidate_sentences(keystroke, context)[0][
             "sentence"
         ]
@@ -85,15 +118,13 @@ class IMEHandler:
 
     def _reconstruct_sentence(self, keystroke: str, token_pool: set) -> list[list[str]]:
         """
-        Reconstruct the sentence from the keystroke.
+        Reconstruct the sentence back to the keystroke by searching all the
+        possible combination of tokens in the token pool.
 
         Args:
-
-                keystroke (str): The keystroke to search for
+            keystroke (str): The keystroke to search for
         Returns:
-
-                list: A list of **tuples (token, method)** containing the possible tokens
-
+            list: A list of **list of str** containing the possible sentences constructed from the token pool
         """
 
         def dp_search(keystroke: str) -> list[list[str]]:
@@ -118,16 +149,14 @@ class IMEHandler:
         unique_result = list(map(list, set(map(tuple, result))))
         return unique_result
 
-    def _get_token_pool(self, keystroke: str) -> set[tuple[str, str]]:
+    def _get_token_pool(self, keystroke: str) -> set[str]:
         """
-        Tokenize string of keystroke into token pool.
+        Tokenize string of keystroke by all IMEs and return the possible tokens in a set.
 
         Args:
-
-            keystroke (str): The keystroke to search for
+            keystroke (str): The keystroke to tokenize
         Returns:
             set: A set of **token(str)** containing the possible tokens
-
         """
         token_pool = set()
 
@@ -140,6 +169,15 @@ class IMEHandler:
 
     @lru_cache_with_doc(maxsize=128)
     def _is_valid_token(self, token: str) -> bool:
+        """
+        Check if the token is valid, i.e. it is valid in at least one IME.
+
+        Args:
+            token (str): The token to check
+        Returns:
+            bool: True if the token is valid, False otherwise
+        """
+
         if not token:
             return False
 
@@ -150,6 +188,14 @@ class IMEHandler:
 
     @lru_cache_with_doc(maxsize=128)
     def _closest_word_distance(self, token: str) -> int:
+        """
+        Get the word distance to the closest word from all IMEs.
+
+        Args:
+            token (str): The token to search for
+        Returns:
+            int: The distance to the closest word
+        """
         min_distance = float("inf")
 
         for ime_type in self.ime_list:
@@ -172,7 +218,7 @@ if __name__ == "__main__":
         user_keystroke = input("Enter keystroke: ")
         num_of_test += 1
         start_time = time.time()
-        # result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
+        result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
         # result = my_IMEHandler._get_token_candidates(user_keystroke)
         result = my_IMEHandler.get_best_sentence(user_keystroke, context)
         end_time = time.time()
