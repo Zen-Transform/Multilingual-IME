@@ -39,7 +39,7 @@ class IMEDetectorOneHot(IMEDetector):
 
         if device == "cuda" and not torch.cuda.is_available():
             self.logger.warning("cuda is not available, using cpu instead")
-            device = "cpu"
+            self._DEVICE = "cpu"
         if isinstance(model_path, Path):
             model_path = str(model_path)
         if not model_path.endswith(".pth"):
@@ -158,7 +158,7 @@ class IMETokenDetectorDL(IMEDetector):
 
         if device == "cuda" and not torch.cuda.is_available():
             self.logger.warning("cuda is not available, using cpu instead")
-            device = "cpu"
+            self._DEVICE = "cpu"
         if isinstance(model_path, Path):
             model_path = str(model_path)
         if not model_path.endswith(".pth"):
