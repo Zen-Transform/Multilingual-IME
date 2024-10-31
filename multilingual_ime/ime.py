@@ -66,6 +66,9 @@ class IME(ABC):
     def is_valid_token(self, keystroke: str) -> bool:
         return self.token_detector.predict(keystroke)
 
+    def closest_word_distance(self, keystroke: str) -> int:
+        return self.keystroke_map_db.closest_word_distance(keystroke)
+    
 
 class BopomofoIME(IME):
     def __init__(self):
