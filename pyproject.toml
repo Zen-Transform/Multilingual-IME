@@ -12,6 +12,9 @@ packages = [
     { include = "data_preprocess", from = "." }
 ]
 include = ["pyproject.toml", "README.md", "LICENSE"]
+exclude = [
+    "multilingual_ime/keystroke_mapping_dictionary",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
