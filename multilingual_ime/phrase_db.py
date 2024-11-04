@@ -34,6 +34,9 @@ class PhraseDataBase:
         return [row[0] for row in self._cursor.fetchall()]
 
     def get_phrase_with_prefix(self, prefix: str) -> list[tuple[str, int]]:
+        if not prefix:
+            return []
+
         self._cursor.execute(
             f"SELECT phrase, frequency FROM phrase_table WHERE phrase LIKE '{prefix}%'"
         )
