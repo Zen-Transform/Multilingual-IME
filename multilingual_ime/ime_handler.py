@@ -1,11 +1,15 @@
 import time
 import logging
+from pathlib import Path
 
 from .candidate import Candidate
 from .core.custom_decorators import lru_cache_with_doc
 from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME
 from .ime import IMEFactory
+from .phrase_db import PhraseDataBase
 from .trie import modified_levenshtein_distance
+
+CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 
 
 class IMEHandler:
@@ -14,6 +18,7 @@ class IMEHandler:
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
+        self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
 
     @lru_cache_with_doc(maxsize=128)
     def get_token_candidates(self, token: str) -> list[Candidate]:
@@ -107,14 +112,54 @@ class IMEHandler:
 
         """
 
+        def solve_word(word: str, candidate_list: list[Candidate]) -> str:
+            if len(word) > len(candidate_list):
+                return "", candidate_list
+
+            output = ""
+            for char, candidates in zip(word, candidate_list):
+                candidates = [candidate.word for candidate in candidates]
+                if char in candidates:
+                    output += char
+                else:
+                    return "", candidate_list
+
+            return output, candidate_list[len(word) :]
+
+        def solve_related(
+            pre_word: str, best_sentence_tokens: list[list[Candidate]]
+        ) -> str:
+            if not best_sentence_tokens:
+                return ""
+
+            if len(best_sentence_tokens) == 1:
+                return best_sentence_tokens[0][0].word
+
+            related_phrases = self._chinese_phrase_db.get_phrase_with_prefix(pre_word)
+            related_phrases = [phrase[0] for phrase in related_phrases]
+
+            if not pre_word or not related_phrases:
+                return best_sentence_tokens[0][0].word + solve_related(
+                    best_sentence_tokens[0][0].word, best_sentence_tokens[1:]
+                )
+
+            for phrase in related_phrases:
+                finished_word, best_sentence_tokens = solve_word(
+                    phrase[1:], best_sentence_tokens
+                )
+                if finished_word:
+                    return finished_word + solve_related(
+                        finished_word[-1], best_sentence_tokens
+                    )
+
+            return ""
+
         best_candidate_sentences = self.get_candidate_sentences(keystroke, context)[0][
             "sentence"
         ]
-        output = ""
-        for token in best_candidate_sentences:
-            output += self.get_token_candidates(token)[0].word
-
-        return output
+        best_sentence_tokens = [self.get_token_candidates(token) for token in best_candidate_sentences]
+        pre_word = context[-1] if context else ""
+        return solve_related(pre_word, best_sentence_tokens)
 
     def _reconstruct_sentence(self, keystroke: str, token_pool: set) -> list[list[str]]:
         """
