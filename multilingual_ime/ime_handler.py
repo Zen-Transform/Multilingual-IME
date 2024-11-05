@@ -50,8 +50,11 @@ class IMEHandler:
                     ]
                 )
 
+        if len(candidates) == 0:
+            self.logger.warning(f"No candidates found for token '{token}'")
+            return [Candidate(token, token, 0, token, 0, "NO_IME")]
+
         candidates = sorted(candidates, key=lambda x: x.distance)
-        assert len(candidates) > 0, f"No candidates found for token '{token}'"
         return candidates
 
     def get_candidate_sentences(self, keystroke: str, context: str = "") -> list[dict]:
@@ -157,7 +160,9 @@ class IMEHandler:
         best_candidate_sentences = self.get_candidate_sentences(keystroke, context)[0][
             "sentence"
         ]
-        best_sentence_tokens = [self.get_token_candidates(token) for token in best_candidate_sentences]
+        best_sentence_tokens = [
+            self.get_token_candidates(token) for token in best_candidate_sentences
+        ]
         pre_word = context[-1] if context else ""
         return solve_related(pre_word, best_sentence_tokens)
 
@@ -263,9 +268,9 @@ if __name__ == "__main__":
         user_keystroke = input("Enter keystroke: ")
         num_of_test += 1
         start_time = time.time()
-        result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
-        # result = my_IMEHandler._get_token_candidates(user_keystroke)
-        result = my_IMEHandler.get_best_sentence(user_keystroke, context)
+        # result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
+        result = my_IMEHandler.get_token_candidates(user_keystroke)
+        # result = my_IMEHandler.get_best_sentence(user_keystroke, context)
         end_time = time.time()
         avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
         print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
