@@ -226,6 +226,10 @@ class EnglishIME(IME):
         assert "".join(english_tokens) == keystroke
         return [english_tokens]
 
+    def is_valid_token(self, keystroke):
+        if keystroke == " ":
+            return True
+        return super().is_valid_token(keystroke)
 
 class IMEFactory:
     @staticmethod
