@@ -16,6 +16,7 @@ class IMEHandler:
     def __init__(self, verbose_mode: bool = False) -> None:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
+        self.logger.addHandler(logging.StreamHandler())
         self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
@@ -115,47 +116,36 @@ class IMEHandler:
 
         """
 
-        def solve_word(word: str, candidate_list: list[Candidate]) -> str:
-            if len(word) > len(candidate_list):
-                return "", candidate_list
+        def solve_sentence(pre_word: str, bestsentence_tokens: list[list[Candidate]]):
 
-            output = ""
-            for char, candidates in zip(word, candidate_list):
-                candidates = [candidate.word for candidate in candidates]
-                if char in candidates:
-                    output += char
-                else:
-                    return "", candidate_list
-
-            return output, candidate_list[len(word) :]
-
-        def solve_related(
-            pre_word: str, best_sentence_tokens: list[list[Candidate]]
-        ) -> str:
-            if not best_sentence_tokens:
-                return ""
-
-            if len(best_sentence_tokens) == 1:
-                return best_sentence_tokens[0][0].word
-
-            related_phrases = self._chinese_phrase_db.get_phrase_with_prefix(pre_word)
-            related_phrases = [phrase[0] for phrase in related_phrases]
-
-            if not pre_word or not related_phrases:
-                return best_sentence_tokens[0][0].word + solve_related(
-                    best_sentence_tokens[0][0].word, best_sentence_tokens[1:]
-                )
-
-            for phrase in related_phrases:
-                finished_word, best_sentence_tokens = solve_word(
-                    phrase[1:], best_sentence_tokens
-                )
-                if finished_word:
-                    return finished_word + solve_related(
-                        finished_word[-1], best_sentence_tokens
+            def recursive(best_sentence_tokens: list[list[Candidate]]) -> str:
+                if not best_sentence_tokens:
+                    return []
+                
+                
+                related_phrases = []
+                for candidate in best_sentence_tokens[0]:
+                    related_phrases.extend(
+                    self._chinese_phrase_db.get_phrase_with_prefix(candidate.word)
                     )
 
-            return ""
+                related_phrases = [phrase[0] for phrase in related_phrases]
+                related_phrases = sorted(related_phrases, key=lambda x: len(x), reverse=True)
+                related_phrases = [phrase for phrase in related_phrases if len(phrase) <= len(best_sentence_tokens)]
+
+                for phrase in related_phrases:
+                    correct_phrase = True
+                    for i, char in enumerate(phrase):
+                        if char not in [candidate.word for candidate in best_sentence_tokens[i]]:
+                            correct_phrase = False
+                            break
+
+                    if correct_phrase:
+                        return [phrase] + recursive(best_sentence_tokens[len(phrase):])
+                
+                return [best_sentence_tokens[0][0].word] + recursive(best_sentence_tokens[1:])
+            
+            return recursive(bestsentence_tokens)
 
         best_candidate_sentences = self.get_candidate_sentences(keystroke, context)[0][
             "sentence"
@@ -163,8 +153,13 @@ class IMEHandler:
         best_sentence_tokens = [
             self.get_token_candidates(token) for token in best_candidate_sentences
         ]
+
         pre_word = context[-1] if context else ""
-        return solve_related(pre_word, best_sentence_tokens)
+        start_time = time.time()
+        result = "".join(solve_sentence(pre_word, best_sentence_tokens))
+        self.logger.info(f"Get Best sentence time: {time.time() - start_time}")
+
+        return result
 
     def _reconstruct_sentence(self, keystroke: str, token_pool: set) -> list[list[str]]:
         """
@@ -261,16 +256,17 @@ if __name__ == "__main__":
     context = ""
     user_keystroke = "t g3bjo4dk4apple wathc"
     start_time = time.time()
-    my_IMEHandler = IMEHandler()
+    my_IMEHandler = IMEHandler(verbose_mode=True)
     print("Initialization time: ", time.time() - start_time)
     avg_time, num_of_test = 0, 0
     while True:
         user_keystroke = input("Enter keystroke: ")
         num_of_test += 1
         start_time = time.time()
-        # result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
-        result = my_IMEHandler.get_token_candidates(user_keystroke)
-        # result = my_IMEHandler.get_best_sentence(user_keystroke, context)
+        result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
+        print(result)
+        # result = my_IMEHandler.get_token_candidates(user_keystroke)
+        result = my_IMEHandler.get_best_sentence(user_keystroke, context)
         end_time = time.time()
         avg_time = (avg_time * (num_of_test - 1) + end_time - start_time) / num_of_test
         print(f"Inference time: {time.time() - start_time}, avg time: {avg_time}")
