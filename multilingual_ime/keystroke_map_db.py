@@ -14,7 +14,7 @@ class KeystrokeMappingDB:
         if not pathlib.Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
 
-        self._conn = sqlite3.connect(db_path)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._cursor = self._conn.cursor()
         self._conn.create_function("levenshtein", 2, modified_levenshtein_distance)
 

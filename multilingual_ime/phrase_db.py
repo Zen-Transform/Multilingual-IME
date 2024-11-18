@@ -8,7 +8,7 @@ class PhraseDataBase:
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
 
-        self._conn = sqlite3.connect(db_path)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._cursor = self._conn.cursor()
 
     def __del__(self) -> None:
