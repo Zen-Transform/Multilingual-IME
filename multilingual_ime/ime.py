@@ -20,8 +20,28 @@ CANGJIE_IME_DB_PATH = Path(__file__).parent / "src" / "cangjie_keystroke_map.db"
 PINYIN_IME_DB_PATH = Path(__file__).parent / "src" / "pinyin_keystroke_map.db"
 ENGLISH_IME_DB_PATH = Path(__file__).parent / "src" / "english_keystroke_map.db"
 
-# Define IME token detector model paths
+# Define IME valid keystroke set
+BOPOMOFO_VALID_KEYSTROKE_SET = set("1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/- ")
+CANGJIE_VALID_KEYSTROKE_SET = set(" qwertyuiopasdfghjklzxcvbnm")
+PINYIN_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
+ENGLISH_VALID_KEYSTROKE_SET = set(
+    " abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
 
+# Define IME token length
+BOPOMOFO_IME_MIN_TOKEN_LENGTH = 2
+BOPOMOFO_IME_MAX_TOKEN_LENGTH = 4
+CANGJIE_IME_MIN_TOKEN_LENGTH = 2
+CANGJIE_IME_MAX_TOKEN_LENGTH = 5
+PINYIN_IME_MIN_TOKEN_LENGTH = 1
+PINYIN_IME_MAX_TOKEN_LENGTH = 6
+ENGLISH_IME_MIN_TOKEN_LENGTH = 1
+ENGLISH_IME_MAX_TOKEN_LENGTH = 30  # TODO: Need to be confirmed (what is the max length of 80% frequenly used english word), 30 is a random number
+
+# Define IME token length varience (for case of user input additional keystroke)
+IME_TOKEN_LENGTH_VARIENCE = 1
+
+# Define IME token detector model paths
 BOPOMOFO_IME_TOKEN_DETECTOR_MODEL_PATH = (
     Path(__file__).parent
     / "src"
@@ -68,7 +88,7 @@ class IME(ABC):
 
     def closest_word_distance(self, keystroke: str) -> int:
         return self.keystroke_map_db.closest_word_distance(keystroke)
-    
+
 
 class BopomofoIME(IME):
     def __init__(self):
@@ -97,6 +117,17 @@ class BopomofoIME(IME):
         ), f"Error: {__class__}.tokenize failed, keystroke'{keystroke}' mismatch with {bopomofo_tokens}"
         return [bopomofo_tokens]
 
+    def is_valid_token(self, keystroke):
+        if (
+            len(keystroke) < BOPOMOFO_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
+            or len(keystroke)
+            > BOPOMOFO_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+        ):
+            return False
+        if any(c not in BOPOMOFO_VALID_KEYSTROKE_SET for c in keystroke):
+            return False
+        return super().is_valid_token(keystroke)
+
 
 class CangjieIME(IME):
     def __init__(self):
@@ -124,6 +155,16 @@ class CangjieIME(IME):
         cangjie_tokens = cut_cangjie_with_regex(keystroke)
         assert "".join(cangjie_tokens) == keystroke
         return [cangjie_tokens]
+
+    def is_valid_token(self, keystroke):
+        if (
+            len(keystroke) < CANGJIE_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
+            or len(keystroke) > CANGJIE_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+        ):
+            return False
+        if any(c not in CANGJIE_VALID_KEYSTROKE_SET for c in keystroke):
+            return False
+        return super().is_valid_token(keystroke)
 
 
 with open(
@@ -200,6 +241,16 @@ class PinyinIME(IME):
 
         return total_ans
 
+    def is_valid_token(self, keystroke):
+        if (
+            len(keystroke) < PINYIN_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
+            or len(keystroke) > PINYIN_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+        ):
+            return False
+        if any(c not in PINYIN_VALID_KEYSTROKE_SET for c in keystroke):
+            return False
+        return super().is_valid_token(keystroke)
+
 
 class EnglishIME(IME):
     def __init__(self):
@@ -227,9 +278,19 @@ class EnglishIME(IME):
         return [english_tokens]
 
     def is_valid_token(self, keystroke):
+        if (
+            len(keystroke) < ENGLISH_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
+            or len(keystroke) > ENGLISH_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+        ):
+            return False
         if keystroke == " ":
             return True
+        if len(keystroke) > 2 and " " in keystroke:
+            return False
+        if any(c not in ENGLISH_VALID_KEYSTROKE_SET for c in keystroke):
+            return False
         return super().is_valid_token(keystroke)
+
 
 class IMEFactory:
     @staticmethod
