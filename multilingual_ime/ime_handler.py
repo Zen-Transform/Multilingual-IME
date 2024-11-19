@@ -121,30 +121,39 @@ class IMEHandler:
             def recursive(best_sentence_tokens: list[list[Candidate]]) -> str:
                 if not best_sentence_tokens:
                     return []
-                
-                
+
                 related_phrases = []
                 for candidate in best_sentence_tokens[0]:
                     related_phrases.extend(
-                    self._chinese_phrase_db.get_phrase_with_prefix(candidate.word)
+                        self._chinese_phrase_db.get_phrase_with_prefix(candidate.word)
                     )
 
                 related_phrases = [phrase[0] for phrase in related_phrases]
-                related_phrases = sorted(related_phrases, key=lambda x: len(x), reverse=True)
-                related_phrases = [phrase for phrase in related_phrases if len(phrase) <= len(best_sentence_tokens)]
+                related_phrases = sorted(
+                    related_phrases, key=lambda x: len(x), reverse=True
+                )
+                related_phrases = [
+                    phrase
+                    for phrase in related_phrases
+                    if len(phrase) <= len(best_sentence_tokens)
+                ]
 
                 for phrase in related_phrases:
                     correct_phrase = True
                     for i, char in enumerate(phrase):
-                        if char not in [candidate.word for candidate in best_sentence_tokens[i]]:
+                        if char not in [
+                            candidate.word for candidate in best_sentence_tokens[i]
+                        ]:
                             correct_phrase = False
                             break
 
                     if correct_phrase:
-                        return [phrase] + recursive(best_sentence_tokens[len(phrase):])
-                
-                return [best_sentence_tokens[0][0].word] + recursive(best_sentence_tokens[1:])
-            
+                        return [phrase] + recursive(best_sentence_tokens[len(phrase) :])
+
+                return [best_sentence_tokens[0][0].word] + recursive(
+                    best_sentence_tokens[1:]
+                )
+
             return recursive(bestsentence_tokens)
 
         best_candidate_sentences = self.get_candidate_sentences(keystroke, context)[0][
