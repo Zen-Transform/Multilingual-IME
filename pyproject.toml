@@ -28,6 +28,7 @@ matplotlib = "^3.9.1"
 pypinyin = "^0.52.0"
 
 
+jieba = "^0.42.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
