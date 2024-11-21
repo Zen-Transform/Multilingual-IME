@@ -48,7 +48,24 @@ class PhraseDataBase:
                 f"INSERT INTO phrase_table (phrase, frequency) VALUES ('{phrase}', {frequency})"
             )
             self._conn.commit()
+    
+    def update(self, phrase: str, frequency: int) -> None:
+        if not self.getphrase(phrase):
+            self.insert(phrase, frequency)
+        self._cursor.execute(
+            f"UPDATE phrase_table SET frequency = {frequency} WHERE phrase = '{phrase}'"
+        )
+        self._conn.commit()
 
+    def delete(self, phrase: str) -> None:
+        self._cursor.execute(f"DELETE FROM phrase_table WHERE phrase = '{phrase}'")
+        self._conn.commit()
+
+    def increment_frequency(self, phrase: str) -> None:
+        self._cursor.execute(
+            f"UPDATE phrase_table SET frequency = frequency + 1 WHERE phrase = '{phrase}'"
+        )
+        self._conn.commit()
 
 if __name__ == "__main__":
     db = PhraseDataBase(Path(__file__).parent / "src" / "chinese_phrase.db")

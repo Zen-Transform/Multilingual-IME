@@ -2,6 +2,8 @@ import time
 import logging
 from pathlib import Path
 
+import jieba
+
 from .candidate import Candidate
 from .core.custom_decorators import lru_cache_with_doc
 from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME
@@ -10,6 +12,7 @@ from .phrase_db import PhraseDataBase
 from .trie import modified_levenshtein_distance
 
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
+USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
 
 
 class IMEHandler:
@@ -20,6 +23,9 @@ class IMEHandler:
         self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
+        self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
+
+        self.auto_phrase_learning = True
 
     @lru_cache_with_doc(maxsize=128)
     def get_token_candidates(self, token: str) -> list[Candidate]:
@@ -76,14 +82,20 @@ class IMEHandler:
         token_pool = self._get_token_pool(keystroke)
         self.logger.info(f"Token pool time: {time.time() - start_time}")
         self.logger.info(f"Token pool: {token_pool}")
+        
+        start_time = time.time()
         token_pool = set(
             [token for token in token_pool if self._is_valid_token(token)]
         )  # Filter out invalid token
         self.logger.info(f"Filter out invalid token time: {time.time() - start_time}")
         self.logger.info(f"Filtered token pool: {token_pool}")
+        
+        start_time = time.time()
         possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
         self.logger.info(f"Reconstruct sentence time: {time.time() - start_time}")
         self.logger.info(f"Possible sentences: {possible_sentences}")
+
+        start_time = time.time()
         result = []
         for sentence in possible_sentences:
             ans_sentence_distance = 0
@@ -95,6 +107,7 @@ class IMEHandler:
             result.append({"sentence": sentence, "distance": ans_sentence_distance})
 
         result = sorted(result, key=lambda x: x["distance"])
+        self.logger.info(f"Get candidate/search sentences distance time: {time.time() - start_time}")
 
         # Filter out none best result
         filter_out_none_best_result = True
@@ -127,7 +140,10 @@ class IMEHandler:
                     related_phrases.extend(
                         self._chinese_phrase_db.get_phrase_with_prefix(candidate.word)
                     )
-
+                    related_phrases.extend(
+                        self._user_phrase_db.get_phrase_with_prefix(candidate.word)
+                    )
+                
                 related_phrases = [phrase[0] for phrase in related_phrases]
                 related_phrases = sorted(
                     related_phrases, key=lambda x: len(x), reverse=True
@@ -259,6 +275,21 @@ class IMEHandler:
             method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
             min_distance = min(min_distance, method_distance)
         return min_distance
+
+    def update_user_phrase_db(self, text: str) -> None:
+        """
+        Update the user phrase database with the given phrase and frequency.
+
+        Args:
+            phrase (str): The phrase to update
+            frequency (int): The frequency of the phrase
+        """
+
+        for phrase in jieba.lcut(text, cut_all=False):
+            if not self._user_phrase_db.getphrase(phrase):
+                self._user_phrase_db.insert(phrase, 1)
+            else:
+                self._user_phrase_db.increment_frequency(phrase)
 
 
 if __name__ == "__main__":
