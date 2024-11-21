@@ -24,6 +24,7 @@ class IMEHandler:
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
+        self.valid_token_pool = set()
 
         self.auto_phrase_learning = True
 
@@ -84,16 +85,19 @@ class IMEHandler:
         self.logger.info(f"Token pool: {token_pool}")
         
         start_time = time.time()
-        token_pool = set(
+        self.valid_token_pool = set(
             [token for token in token_pool if self._is_valid_token(token)]
         )  # Filter out invalid token
         self.logger.info(f"Filter out invalid token time: {time.time() - start_time}")
-        self.logger.info(f"Filtered token pool: {token_pool}")
+        self.logger.info(f"Filtered token pool: {self.valid_token_pool}")
         
         start_time = time.time()
-        possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
+        possible_sentences = self._reconstruct_sentence(keystroke, self.valid_token_pool)
+        if not possible_sentences:  # Solve for the case where there is no possible sentence in the valid token pool
+            possible_sentences = self._reconstruct_sentence(keystroke, token_pool)
         self.logger.info(f"Reconstruct sentence time: {time.time() - start_time}")
         self.logger.info(f"Possible sentences: {possible_sentences}")
+
 
         start_time = time.time()
         result = []
@@ -268,6 +272,9 @@ class IMEHandler:
         """
         min_distance = float("inf")
 
+        if token not in self.valid_token_pool:
+            return min_distance
+        
         for ime_type in self.ime_list:
             if not self.ime_handlers[ime_type].is_valid_token(token):
                 continue
