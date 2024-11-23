@@ -3,6 +3,19 @@ import time
 import threading
 
 from .ime_handler import IMEHandler
+from .ime import (
+    BOPOMOFO_VALID_KEYSTROKE_SET,
+    ENGLISH_VALID_KEYSTROKE_SET,
+    PINYIN_VALID_KEYSTROKE_SET,
+    CANGJIE_VALID_KEYSTROKE_SET,
+)
+
+TOTAL_VALID_KEYSTROKE_SET = (
+    BOPOMOFO_VALID_KEYSTROKE_SET.union(ENGLISH_VALID_KEYSTROKE_SET)
+    .union(PINYIN_VALID_KEYSTROKE_SET)
+    .union(CANGJIE_VALID_KEYSTROKE_SET)
+)
+
 
 class KeyEventProcessor:
     def __init__(self, time_threshold):
@@ -26,8 +39,10 @@ class KeyEventProcessor:
             self.dynamic_keystrokes = self.dynamic_keystrokes[:-1]
         elif event.name == "space":
             self.dynamic_keystrokes += " "
-        elif event.name in "abcdefghijklmnopqrstuvwxyz1234567890":
+            self.show_output = self.show_output + " "
+        elif event.name in TOTAL_VALID_KEYSTROKE_SET:
             self.dynamic_keystrokes += event.name
+            self.show_output = self.show_output + event.name
         else:
             # print(f"Invalid key: {event.name}")
             pass
@@ -36,7 +51,7 @@ class KeyEventProcessor:
         self.last_key_event = event
 
         self.key_handler(event)
-        self.show_output = self.show_output + event.name
+        
 
         print(f"\r{self.show_output} {' ' * (50 - len(self.show_output))}", end="")
 
@@ -72,5 +87,5 @@ if __name__ == "__main__":
     stat_time = time.time()
     my_IMEHandler = IMEHandler(verbose_mode=False)
     print("Initialization time: ", time.time() - stat_time)
-    processor = KeyEventProcessor(time_threshold=0.3)
+    processor = KeyEventProcessor(time_threshold=0.2)
     processor.run()
