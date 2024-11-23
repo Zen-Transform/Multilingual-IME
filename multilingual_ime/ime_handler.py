@@ -59,11 +59,24 @@ class IMEHandler:
                 )
 
         if len(candidates) == 0:
-            self.logger.warning(f"No candidates found for token '{token}'")
+            self.logger.info(f"No candidates found for token '{token}'")
             return [Candidate(token, token, 0, token, 0, "NO_IME")]
 
         candidates = sorted(candidates, key=lambda x: x.distance)
         return candidates
+
+    def get_token_candidate_words(self, token: str) -> list[str]:
+        """
+        Get the possible candidate words of the token from all IMEs.
+
+        Args:
+            token (str): The token to search for
+        Returns:
+            list: A list of **str** containing the possible candidate words
+        """
+
+        candidates = self.get_token_candidates(token)
+        return [candidate.word for candidate in candidates]
 
     def get_candidate_sentences(self, keystroke: str, context: str = "") -> list[dict]:
         """
@@ -311,7 +324,7 @@ if __name__ == "__main__":
         num_of_test += 1
         start_time = time.time()
         result = my_IMEHandler.get_candidate_sentences(user_keystroke, context)
-        print(result)
+        print("result", result)
         # result = my_IMEHandler.get_token_candidates(user_keystroke)
         result = my_IMEHandler.get_best_sentence(user_keystroke, context)
         end_time = time.time()
