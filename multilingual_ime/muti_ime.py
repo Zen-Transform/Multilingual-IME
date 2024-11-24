@@ -29,6 +29,7 @@ TOTAL_VALID_KEYSTROKE_SET = (
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
 
+WITH_COLOR = True
 
 class KeyEventHandler:
     def __init__(self, verbose_mode: bool = False) -> None:
@@ -39,42 +40,48 @@ class KeyEventHandler:
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
-        self._token_pool_set = set()
 
         self.pre_context = ""
-
-        self.freezed_keystrokes = ""
-        self.unfreezed_keystrokes = ""
-        self.freezed_token_sentence = []
-        self.unfreezed_token_sentence = []
-        self.freezed_composition_string = []
-        self.unfreezed_composition_string = []
 
         # Config Settings
         self.AUTO_PHRASE_LEARN = True
         self.SELECTION_PAGE_SIZE = 5
 
-        # State Variables
+        # Other State Variables
         self._last_key_event = None
         self._timer = None
-        self.in_selection_mode = False
+
+        # State Variables
+        self._token_pool_set = set()
         self.have_selected = False
 
+        self.freezed_index = 0
+        self.freezed_token_sentence = []
+        self.freezed_composition_words = []
+
+        self.unfreezed_index = 0
+        self.unfreezed_keystrokes = ""
+        self.unfreezed_token_sentence = []
+        self.unfreezed_composition_words = []
+
+        # Selection States
+        self.in_selection_mode = False
         self.selection_index = 0
-        self.composition_index = 0
+        self.candidate_word_list = []
 
     def _reset_states(self) -> None:
-        self.freezed_keystrokes = ""
-        self.unfreezed_keystrokes = ""
-        self.freezed_token_sentence = []
-        self.unfreezed_token_sentence = []
-        self.freezed_composition_string = []
-        self.unfreezed_composition_string = []
         self._token_pool_set = set()
-
-
         self.have_selected = False
-        self.composition_index = 0
+
+        self.freezed_index = 0
+        self.freezed_token_sentence = []
+        self.freezed_composition_words = []
+
+        self.unfreezed_index = 0
+        self.unfreezed_keystrokes = ""
+        self.unfreezed_token_sentence = []
+        self.unfreezed_composition_words = []
+
         self._reset_selection_states()
 
     def _reset_selection_states(self) -> None:
@@ -82,29 +89,56 @@ class KeyEventHandler:
         self.selection_index = 0
         self.candidate_word_list = []
 
+    def _unfreeze_to_freeze(self) -> None:
+        self.freezed_token_sentence = self.total_token_sentence
+        self.freezed_composition_words = self.total_composition_words
+        self.freezed_index = self.composition_index
+
+        self.unfreezed_keystrokes = ""
+        self.unfreezed_token_sentence = []
+        self.unfreezed_composition_words = []
+        self.unfreezed_index = 0  # Reset the index should be the last step
+
     @property
     def token_pool(self) -> list[tuple[str, int]]:
         return list(self._token_pool_set)
 
     @property
     def total_composition_words(self) -> list[str]:
-        return self.freezed_composition_string + self.unfreezed_composition_string
+        return (
+            self.freezed_composition_words[: self.freezed_index]
+            + self.unfreezed_composition_words
+            + self.freezed_composition_words[self.freezed_index :]
+        )
 
     @property
-    def total_tokens(self) -> list[str]:
-        return self.freezed_token_sentence + self.unfreezed_token_sentence
+    def total_token_sentence(self) -> list[str]:
+        return (
+            self.freezed_token_sentence[: self.freezed_index]
+            + self.unfreezed_token_sentence
+            + self.freezed_token_sentence[self.freezed_index :]
+        )
+
+    @property
+    def composition_index(self) -> int:
+        return self.freezed_index + self.unfreezed_index
 
     def get_composition_string(self) -> str:
         return "".join(self.total_composition_words)
 
     def get_composition_string_with_cusor(self) -> str:
-        # total = self.total_composition_words
         total = []
         for i, word in enumerate(self.total_composition_words):
-            if i < len(self.freezed_composition_string):
-                total.append(Fore.BLUE + word + Style.RESET_ALL)
+            if i < self.freezed_index:
+                total.append((Fore.BLUE if WITH_COLOR else "") + word + Style.RESET_ALL)
+            elif (
+                self.freezed_index
+                <= i
+                < self.freezed_index + len(self.unfreezed_composition_words)
+            ):
+                total.append((Fore.YELLOW if WITH_COLOR else "") + word + Style.RESET_ALL)
             else:
-                total.append(Fore.YELLOW + word + Style.RESET_ALL)
+                total.append((Fore.BLUE if WITH_COLOR else "") + word + Style.RESET_ALL)
 
         total.insert(self.composition_index, Fore.GREEN + "|" + Style.RESET_ALL)
         return "".join(total)
@@ -119,17 +153,6 @@ class KeyEventHandler:
         output += "]"
         return output
 
-    def get_dynamic_keystrokes(self) -> str:
-        return self.unfreezed_keystrokes
-
-    def _unfreeze_to_freeze(self) -> None:
-        self.freezed_token_sentence = self.freezed_token_sentence + self.unfreezed_token_sentence
-        self.unfreezed_token_sentence = []
-        self.freezed_composition_string = self.freezed_composition_string + self.unfreezed_composition_string
-        self.unfreezed_composition_string = []
-        self.freezed_keystrokes = "".join(self.freezed_token_sentence)
-        self.unfreezed_keystrokes = "".join(self.unfreezed_token_sentence)
-
     def handle_key(self, key: str) -> None:
         special_keys = ["enter", "left", "right", "down", "up", "esc"]
         if key in special_keys:
@@ -140,14 +163,18 @@ class KeyEventHandler:
                 elif key == "up":
                     if self.selection_index > 0:
                         self.selection_index -= 1
-                elif key == "enter":  # Overwrite the composition string & reset selection states
+                elif (
+                    key == "enter"
+                ):  # Overwrite the composition string & reset selection states
                     self.have_selected = True
                     selected_word = self.candidate_word_list[self.selection_index]
-                    self.freezed_composition_string[self.composition_index - 1] = selected_word
+                    self.freezed_composition_words[self.composition_index - 1] = (
+                        selected_word
+                    )
                     # ! Recaculate the index
-                    self.composition_index = self.composition_index + len(selected_word) - 1
+                    self.freezed_index = self.freezed_index + len(selected_word) - 1
                     self._reset_selection_states()
-                elif key == "left":  # Open side selection ? 
+                elif key == "left":  # Open side selection ?
                     pass
                 elif key == "right":
                     pass
@@ -162,21 +189,22 @@ class KeyEventHandler:
                     print("Ouputing:", self.get_composition_string())
                     self._reset_states()
                 elif key == "left":
-                    if self.composition_index > 0:
-                        self.composition_index -= 1
-                        self._unfreeze_to_freeze()
+                    self._unfreeze_to_freeze()
+                    if self.freezed_index > 0:
+                        self.freezed_index -= 1
                 elif key == "right":
-                    if self.composition_index < len(
-                        self.total_composition_words
-                    ):
-                        self.composition_index += 1
-                        self._unfreeze_to_freeze()
+                    self._unfreeze_to_freeze()
+                    if self.freezed_index < len(self.total_composition_words):
+                        self.freezed_index += 1
                 elif key == "down":  # Enter selection mode
-                    if len(self.total_tokens) > 0:
+                    self._unfreeze_to_freeze()
+                    if (
+                        len(self.total_token_sentence) > 0
+                        and self.composition_index > 0
+                    ):
                         self.in_selection_mode = True
-                        token = self.total_tokens[self.composition_index - 1]
+                        token = self.total_token_sentence[self.composition_index - 1]
                         self.candidate_word_list = self.get_token_candidate_words(token)
-                        self._unfreeze_to_freeze()
                 elif key == "esc":
                     self._reset_states()
                 else:
@@ -211,14 +239,12 @@ class KeyEventHandler:
             self.logger.info(f"Filtered sentence: {time.time() - start_time}")
 
             start_time = time.time()
-            self.unfreezed_composition_string = self._token_sentence_to_word_sentence(
+            self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
                 possible_sentences
             )
             self.logger.info(f"Token to word sentence: {time.time() - start_time}")
 
-            self.composition_index = len(
-                self.freezed_composition_string + self.unfreezed_composition_string
-            )
+            self.unfreezed_index = len(self.unfreezed_composition_words)
 
     def _update_token_pool(self) -> None:
         for ime_type in self.ime_list:
@@ -325,14 +351,14 @@ class KeyEventHandler:
                     )
 
                 related_phrases = [phrase[0] for phrase in related_phrases]
-                related_phrases = sorted(
-                    related_phrases, key=lambda x: len(x), reverse=True
-                )
                 related_phrases = [
                     phrase
                     for phrase in related_phrases
                     if len(phrase) <= len(best_sentence_tokens)
                 ]
+                related_phrases = sorted(
+                    related_phrases, key=lambda x: len(x), reverse=True
+                )
 
                 for phrase in related_phrases:
                     correct_phrase = True
@@ -354,17 +380,12 @@ class KeyEventHandler:
 
             return recursive(sentence_candidate)
 
-        start_time = time.time()
         sentence_candidates = [
             self.token_to_candidates(token) for token in token_sentence
         ]
 
         pre_word = context[-1] if context else ""
-        start_time = time.time()
         result = solve_sentence(sentence_candidates, pre_word)
-
-        # print("== result:", result)
-        self.logger.info(f"Get Best sentence time: {time.time() - start_time}")
         return result
 
     def _reconstruct_sentence(self, keystroke: str) -> list[list[str]]:
@@ -471,25 +492,20 @@ if __name__ == "__main__":
     context = ""
     user_keystroke = "t g3bjo4dk4apple wathc"
     start_time = time.time()
-    my_IMEHandler = KeyEventHandler(verbose_mode=False)
+    my_IMEHandler = KeyEventHandler(verbose_mode=True)
     print("Initialization time: ", time.time() - start_time)
     avg_time, num_of_test = 0, 0
 
     def on_press_handler(event):
-
+        handle_time = time.time()
         my_IMEHandler.handle_key(event.name)
+        print("Handle time:", time.time() - handle_time)
         print(
             f"{my_IMEHandler.get_composition_string_with_cusor()}"
             + f"\t\t {my_IMEHandler.composition_index}"
             + f"\t\t{my_IMEHandler.get_candidate_words_with_cursor() if my_IMEHandler.in_selection_mode else ''}"
             + f"\t\t{my_IMEHandler.selection_index if my_IMEHandler.in_selection_mode else ''}"
         )
-
-        # print("dyna :", my_IMEHandler.get_dynamic_keystrokes())
-        # print("recon:", my_IMEHandler._reconstruct_sentence(my_IMEHandler.get_dynamic_keystrokes()))
-        # print("compo:",my_IMEHandler.get_composition_string())
-        # print(f"\r{show_output} {' ' * (200 - len(show_output))}", end="")
-
     keyboard.on_press(on_press_handler)
     keyboard.wait("esc")
     # while True:
