@@ -102,7 +102,7 @@ class KeyEventHandler:
         self.unfreezed_index = 0  # Reset the index should be the last step
 
     @property
-    def token_pool(self) -> list[tuple[str, int]]:
+    def token_pool(self) -> list[str]:
         return list(self._token_pool_set)
 
     @property
@@ -193,7 +193,10 @@ class KeyEventHandler:
                     self.unfreezed_index -= 1
                 else:
                     if self.freezed_index > 0:
-                        self.freezed_composition_words = self.freezed_composition_words[: self.freezed_index - 1] + self.freezed_composition_words[self.freezed_index:]
+                        self.freezed_composition_words = (
+                            self.freezed_composition_words[: self.freezed_index - 1]
+                            + self.freezed_composition_words[self.freezed_index :]
+                        )
                         self.freezed_index -= 1
                         return
             elif key == "space":
@@ -245,19 +248,13 @@ class KeyEventHandler:
             token_ways = self.ime_handlers[ime_type].tokenize(self.unfreezed_keystrokes)
             for ways in token_ways:
                 for token in ways:
-                    self._token_pool_set.add((token, self.get_token_distance(token)))
+                    self._token_pool_set.add(token)
 
     def _is_token_in_pool(self, token: str) -> bool:
-        for token, _ in self.token_pool:
-            if token == token:
-                return True
-        return False
+        return token in self._token_pool_set
 
+    @lru_cache_with_doc(maxsize=128)
     def get_token_distance(self, request_token: str) -> int:
-        for token, distance in self.token_pool:
-            if token == request_token:
-                return distance
-
         return self._closest_word_distance(request_token)
 
     @lru_cache_with_doc(maxsize=128)
@@ -332,7 +329,9 @@ class KeyEventHandler:
         self, token_sentence: list[str], context: str = ""
     ) -> list[str]:
 
-        def solve_sentence(sentence_candidate: list[list[Candidate]], pre_word: str):
+        def solve_sentence_phrase_matching(
+            sentence_candidate: list[list[Candidate]], pre_word: str
+        ):
             # TODO: Consider the context
             def recursive(best_sentence_tokens: list[list[Candidate]]) -> list[str]:
                 if not best_sentence_tokens:
@@ -377,12 +376,18 @@ class KeyEventHandler:
 
             return recursive(sentence_candidate)
 
+        def solve_sentence_naive_first(
+            sentence_candidate: list[list[Candidate]],
+        ) -> list[str]:
+            return [c[0].word for c in sentence_candidate]
+
         sentence_candidates = [
             self.token_to_candidates(token) for token in token_sentence
         ]
 
         pre_word = context[-1] if context else ""
-        result = solve_sentence(sentence_candidates, pre_word)
+        result = solve_sentence_phrase_matching(sentence_candidates, pre_word)
+        # result = solve_sentence_naive_first(sentence_candidates)
         return result
 
     def _reconstruct_sentence(self, keystroke: str) -> list[list[str]]:
@@ -417,14 +422,18 @@ class KeyEventHandler:
             return ans
 
         token_pool = set(
-            [token for token, dis in self.token_pool if dis != float("inf")]
+            [
+                token
+                for token in self.token_pool
+                if self.get_token_distance(token) != float("inf")
+            ]
         )
         result = dp_search(keystroke, token_pool)
         unique_result = list(
             map(list, set(map(tuple, result)))
         )  # FIXME: Find out why there are duplicates
         if not unique_result:
-            token_pool = set([token for token, dis in self.token_pool])
+            token_pool = set([token for token in self.token_pool])
             result = dp_search(keystroke, token_pool)
             unique_result = list(
                 map(list, set(map(tuple, result)))
