@@ -403,7 +403,7 @@ class KeyEventHandler:
 
         def dp_search(keystroke: str, token_pool: set[str]) -> list[list[str]]:
             if not keystroke:
-                return [[]]
+                return []
 
             ans = []
             for token_str in token_pool:
@@ -413,7 +413,7 @@ class KeyEventHandler:
                             [token_str] + sub_ans
                             for sub_ans in dp_search(
                                 keystroke[len(token_str) :], token_pool
-                            )
+                            ) if sub_ans
                         ]
                     )
 
@@ -429,17 +429,11 @@ class KeyEventHandler:
             ]
         )
         result = dp_search(keystroke, token_pool)
-        unique_result = list(
-            map(list, set(map(tuple, result)))
-        )  # FIXME: Find out why there are duplicates
-        if not unique_result:
+        if not result:
             token_pool = set([token for token in self.token_pool])
             result = dp_search(keystroke, token_pool)
-            unique_result = list(
-                map(list, set(map(tuple, result)))
-            )  # FIXME: Find out why there are duplicates
 
-        return unique_result
+        return result
 
     def _calculate_sentence_distance(self, sentence: list[str]) -> int:
         """
