@@ -71,7 +71,7 @@ class KeyEventHandler:
         self.selection_index = 0
         self.candidate_word_list = []
 
-    def _reset_states(self) -> None:
+    def _reset_all_states(self) -> None:
         self._token_pool_set = set()
         self.have_selected = False
 
@@ -92,6 +92,7 @@ class KeyEventHandler:
         self.candidate_word_list = []
 
     def _unfreeze_to_freeze(self) -> None:
+        self._token_pool_set = set()
         self.freezed_token_sentence = self.total_token_sentence
         self.freezed_composition_words = self.total_composition_words
         self.freezed_index = self.composition_index
@@ -162,7 +163,7 @@ class KeyEventHandler:
             else:
                 if key == "enter":
                     print("Ouputing:", self.get_composition_string())
-                    self._reset_states()
+                    self._reset_all_states()
                 elif key == "left":
                     self._unfreeze_to_freeze()
                     if self.freezed_index > 0:
@@ -181,7 +182,7 @@ class KeyEventHandler:
                         token = self.total_token_sentence[self.composition_index - 1]
                         self.candidate_word_list = self.get_token_candidate_words(token)
                 elif key == "esc":
-                    self._reset_states()
+                    self._reset_all_states()
                 else:
                     print(f"Invalid Special key: {key}")
 
