@@ -191,6 +191,7 @@ class KeyEventHandler:
             if key == "backspace":
                 if self.unfreezed_index > 0:
                     self.unfreezed_keystrokes = self.unfreezed_keystrokes[:-1]
+                    self.unfreezed_composition_words = self.unfreezed_composition_words[: -1]
                     self.unfreezed_index -= 1
                 else:
                     if self.freezed_index > 0:
@@ -202,47 +203,50 @@ class KeyEventHandler:
                         return
             elif key == "space":
                 self.unfreezed_keystrokes += " "
-                self.unfreezed_composition_words += key
+                self.unfreezed_composition_words += [" "]
                 self.unfreezed_index += 1
             elif key in TOTAL_VALID_KEYSTROKE_SET:
                 self.unfreezed_keystrokes += key
-                self.unfreezed_composition_words += key
+                self.unfreezed_composition_words += [key]
                 self.unfreezed_index += 1
             else:
                 print(f"Invalid key: {key}")
                 return
 
-            start_time = time.time()
-            self._update_token_pool()
-            self.logger.info(f"Updated token pool: {time.time() - start_time}")
-            self.logger.info(f"Token pool: {self.token_pool}")
+    def slow_handle(self):
+        start_time = time.time()
+        self._update_token_pool()
+        self.logger.info(f"Updated token pool: {time.time() - start_time}")
+        self.logger.info(f"Token pool: {self.token_pool}")
 
-            start_time = time.time()
-            possible_sentences = self._reconstruct_sentence(self.unfreezed_keystrokes)
-            self.logger.info(f"Reconstructed sentence: {time.time() - start_time}")
-            self.logger.info(f"Reconstructed sentences: {possible_sentences}")
+        start_time = time.time()
+        possible_sentences = self._reconstruct_sentence(self.unfreezed_keystrokes)
+        self.logger.info(f"Reconstructed sentence: {time.time() - start_time}")
+        self.logger.info(f"Reconstructed sentences: {possible_sentences}")
 
-            start_time = time.time()
-            possible_sentences = self._filter_possible_sentences_by_distance(
-                possible_sentences
-            )
-            possible_sentences = self._get_best_sentence(possible_sentences)
-            self.unfreezed_token_sentence = possible_sentences
-            self.logger.info(f"Filtered sentence: {time.time() - start_time}")
-            self.logger.info(f"Filtered sentences: {possible_sentences}")
-
-            start_time = time.time()
-            self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
-                possible_sentences
-            )
-            self.logger.info(f"Token to word sentence: {time.time() - start_time}")
-            self.logger.info(
-                f"Token to word sentences: {self.unfreezed_composition_words}"
-            )
-
-            self.unfreezed_index = len(self.unfreezed_composition_words)
-
+        if possible_sentences == []:
+            self.logger.info("No possible sentences found")
             return
+
+        start_time = time.time()
+        possible_sentences = self._filter_possible_sentences_by_distance(
+            possible_sentences
+        )
+        possible_sentences = self._get_best_sentence(possible_sentences)
+        self.unfreezed_token_sentence = possible_sentences
+        self.logger.info(f"Filtered sentence: {time.time() - start_time}")
+        self.logger.info(f"Filtered sentences: {possible_sentences}")
+
+        start_time = time.time()
+        self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
+            possible_sentences
+        )
+        self.logger.info(f"Token to word sentence: {time.time() - start_time}")
+        self.logger.info(f"Token to word sentences: {self.unfreezed_composition_words}")
+
+        self.unfreezed_index = len(self.unfreezed_composition_words)
+
+        return
 
     def _update_token_pool(self) -> None:
         for ime_type in self.ime_list:
@@ -414,7 +418,8 @@ class KeyEventHandler:
                             [token_str] + sub_ans
                             for sub_ans in dp_search(
                                 keystroke[len(token_str) :], token_pool
-                            ) if sub_ans
+                            )
+                            if sub_ans
                         ]
                     )
 
@@ -528,74 +533,30 @@ class EventWrapper:
         self.my_keyeventhandler = KeyEventHandler(verbose_mode=False)
         print("Initialization time: ", time.time() - start_time)
         self.last_key_event = None
-        self.timer = None
+        self._get_timer = None
+        self._run_timer = None
 
     def on_press_handler(self, event):
         if event.name in ["enter", "left", "right", "down", "up", "esc"]:
             self.my_keyeventhandler.handle_key(event.name)
             self.update_ui()
         else:
-            if self.timer is not None:
-                self.timer.cancel()
-
-            total_composition_words = None
-            freezed_index = self.my_keyeventhandler.freezed_index
-            freezed_composition_words = (
-                self.my_keyeventhandler.freezed_composition_words
-            )
-            unfreezed_composition_words = (
-                self.my_keyeventhandler.unfreezed_composition_words
-            )
-            composition_index = self.my_keyeventhandler.composition_index
-
-            in_selection_mode = self.my_keyeventhandler.in_selection_mode
-            selection_index = self.my_keyeventhandler.selection_index
-            candidate_word_list = self.my_keyeventhandler.candidate_word_list
-
-            # quick action
-            if event.name == "backspace":
-                unfreezed_composition_words = unfreezed_composition_words[:-1]  # ! ??
-                total_composition_words = (
-                    freezed_composition_words[:freezed_index]
-                    + unfreezed_composition_words
-                    + freezed_composition_words[freezed_index:]
-                )
-                composition_index -= 1
-            elif event.name == "space":
-                unfreezed_composition_words = unfreezed_composition_words + [" "]
-                total_composition_words = (
-                    freezed_composition_words[:freezed_index]
-                    + unfreezed_composition_words
-                    + freezed_composition_words[freezed_index:]
-                )
-                composition_index += 1
-            elif event.name in TOTAL_VALID_KEYSTROKE_SET:
-                unfreezed_composition_words = unfreezed_composition_words + [event.name]
-                total_composition_words = (
-                    freezed_composition_words[:freezed_index]
-                    + unfreezed_composition_words
-                    + freezed_composition_words[freezed_index:]
-                )
-                composition_index += 1
-
-            else:
-                print(f"Invalid key: {event.name}")
-                return
+            if self._get_timer is not None:
+                self._get_timer.cancel()
+            
+            if self._run_timer is not None:
+                self._run_timer.cancel()
 
             self.my_keyeventhandler.handle_key(event.name)
 
-            self.timer = threading.Timer(0.5, self.update_ui)
-            self.timer.start()
+            self._run_timer = threading.Timer(0.25, self.my_keyeventhandler.slow_handle)
+            self._run_timer.start()
+            self._get_timer = threading.Timer(0.5, self.update_ui)
+            self._get_timer.start()
 
-            print(
-                f"{get_composition_string_with_cusor(total_composition_words, freezed_index, unfreezed_composition_words, composition_index)}"
-                + f"\t\t {composition_index}"
-                + f"\t\t{get_candidate_words_with_cursor(candidate_word_list, selection_index) if in_selection_mode else ''}"
-                + f"\t\t{selection_index if in_selection_mode else ''}"
-            )
+            self.update_ui()
 
     def update_ui(self):
-        # Slow Action
         print(
             f"{get_composition_string_with_cusor(self.my_keyeventhandler.total_composition_words, self.my_keyeventhandler.freezed_index, self.my_keyeventhandler.unfreezed_composition_words, self.my_keyeventhandler.composition_index)}"
             + f"\t\t {self.my_keyeventhandler.composition_index}"
