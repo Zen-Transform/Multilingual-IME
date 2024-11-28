@@ -191,7 +191,9 @@ class KeyEventHandler:
             if key == "backspace":
                 if self.unfreezed_index > 0:
                     self.unfreezed_keystrokes = self.unfreezed_keystrokes[:-1]
-                    self.unfreezed_composition_words = self.unfreezed_composition_words[: -1]
+                    self.unfreezed_composition_words = self.unfreezed_composition_words[
+                        :-1
+                    ]
                     self.unfreezed_index -= 1
                 else:
                     if self.freezed_index > 0:
@@ -327,7 +329,9 @@ class KeyEventHandler:
         return result
 
     def _get_best_sentence(self, possible_sentences: list[dict]) -> list[str]:
-        sorted(possible_sentences, key=lambda x: len(x["sentence"]))
+        possible_sentences = sorted(
+            possible_sentences, key=lambda x: len(x["sentence"])
+        )
         return possible_sentences[0]["sentence"]
 
     def _token_sentence_to_word_sentence(
@@ -530,31 +534,9 @@ def get_candidate_words_with_cursor(
 class EventWrapper:
     def __init__(self):
         start_time = time.time()
-        self.my_keyeventhandler = KeyEventHandler(verbose_mode=False)
+        self.my_keyeventhandler = KeyEventHandler(verbose_mode=True)
         print("Initialization time: ", time.time() - start_time)
-        self.last_key_event = None
-        self._get_timer = None
         self._run_timer = None
-
-    def on_press_handler(self, event):
-        if event.name in ["enter", "left", "right", "down", "up", "esc"]:
-            self.my_keyeventhandler.handle_key(event.name)
-            self.update_ui()
-        else:
-            if self._get_timer is not None:
-                self._get_timer.cancel()
-            
-            if self._run_timer is not None:
-                self._run_timer.cancel()
-
-            self.my_keyeventhandler.handle_key(event.name)
-
-            self._run_timer = threading.Timer(0.25, self.my_keyeventhandler.slow_handle)
-            self._run_timer.start()
-            self._get_timer = threading.Timer(0.5, self.update_ui)
-            self._get_timer.start()
-
-            self.update_ui()
 
     def update_ui(self):
         print(
@@ -564,8 +546,32 @@ class EventWrapper:
             + f"\t\t{self.my_keyeventhandler.selection_index if self.my_keyeventhandler.in_selection_mode else ''}"
         )
 
+    def slow_handle(self):
+        self.my_keyeventhandler.slow_handle()
+        self.update_ui()
+
+    def on_key_event(self, event):
+        if event.event_type == keyboard.KEY_DOWN:
+            if event.name in ["enter", "left", "right", "down", "up", "esc"]:
+                self.my_keyeventhandler.handle_key(event.name)
+            else:
+                if keyboard.is_pressed("ctrl"):
+                    self.my_keyeventhandler.handle_key("©" + event.name)
+                elif keyboard.is_pressed("shift"):
+                    self.my_keyeventhandler.handle_key(event.name.upper())
+                else:
+                    self.my_keyeventhandler.handle_key(event.name)
+
+                if self._run_timer is not None:
+                    self._run_timer.cancel()
+
+                self._run_timer = threading.Timer(0.5, self.slow_handle)
+                self._run_timer.start()
+
+        self.update_ui()
+
     def run(self):
-        keyboard.on_press(self.on_press_handler)
+        keyboard.hook(self.on_key_event)
         keyboard.wait("esc")
 
 
