@@ -68,8 +68,8 @@ class KeyEventHandler:
 
         # Selection States
         self.in_selection_mode = False
-        self.selection_index = 0
-        self.candidate_word_list = []
+        self._total_selection_index = 0
+        self._total_candidate_word_list = []
 
     def _reset_all_states(self) -> None:
         self._token_pool_set = set()
@@ -88,8 +88,8 @@ class KeyEventHandler:
 
     def _reset_selection_states(self) -> None:
         self.in_selection_mode = False
-        self.selection_index = 0
-        self.candidate_word_list = []
+        self._total_selection_index = 0
+        self._total_candidate_word_list = []
 
     def _unfreeze_to_freeze(self) -> None:
         self._token_pool_set = set()
@@ -136,6 +136,21 @@ class KeyEventHandler:
     def composition_index(self) -> int:
         return self.freezed_index + self.unfreezed_index
 
+    @property
+    def candidate_word_list(self) -> list[str]:
+        """
+        The candidate word list for the current token in selection mode.
+        Show only the current page of the candidate word list.
+        """
+        page = self._total_selection_index // self.SELECTION_PAGE_SIZE
+        return self._total_candidate_word_list[
+            page * self.SELECTION_PAGE_SIZE : (page + 1) * self.SELECTION_PAGE_SIZE
+        ]
+
+    @property
+    def selection_index(self) -> int:
+        return self._total_selection_index % self.SELECTION_PAGE_SIZE
+
     def get_composition_string(self) -> str:
         return "".join(self.total_composition_words)
 
@@ -144,16 +159,16 @@ class KeyEventHandler:
         if key in special_keys:
             if self.in_selection_mode:
                 if key == "down":
-                    if self.selection_index < len(self.candidate_word_list) - 1:
-                        self.selection_index += 1
+                    if self._total_selection_index < len(self._total_candidate_word_list) - 1:
+                        self._total_selection_index += 1
                 elif key == "up":
-                    if self.selection_index > 0:
-                        self.selection_index -= 1
+                    if self._total_selection_index > 0:
+                        self._total_selection_index -= 1
                 elif (
                     key == "enter"
                 ):  # Overwrite the composition string & reset selection states
                     self.have_selected = True
-                    selected_word = self.candidate_word_list[self.selection_index]
+                    selected_word = self._total_candidate_word_list[self._total_selection_index]
                     self.freezed_composition_words[self.composition_index - 1] = (
                         selected_word
                     )
@@ -190,10 +205,10 @@ class KeyEventHandler:
                     ):
                         token = self.total_token_sentence[self.composition_index - 1]
                         if not self.ime_handlers[ENGLISH_IME].is_valid_token(token):
-                            self.candidate_word_list = self.get_token_candidate_words(
+                            self._total_candidate_word_list = self._get_token_candidate_words(
                                 token
                             )
-                            if len(self.candidate_word_list) > 1:
+                            if len(self._total_candidate_word_list) > 1:
                                 # Only none-english token can enter selection mode, and
                                 # the candidate list should have more than 1 candidate
                                 self.in_selection_mode = True
@@ -320,7 +335,7 @@ class KeyEventHandler:
         candidates = sorted(candidates, key=lambda x: x.distance)
         return candidates
 
-    def get_token_candidate_words(self, token: str) -> list[str]:
+    def _get_token_candidate_words(self, token: str) -> list[str]:
         """
         Get the possible candidate words of the token from all IMEs.
 
