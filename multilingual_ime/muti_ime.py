@@ -93,14 +93,24 @@ class KeyEventHandler:
 
     def _unfreeze_to_freeze(self) -> None:
         self._token_pool_set = set()
-        self.freezed_token_sentence = self.total_token_sentence
-        self.freezed_composition_words = self.total_composition_words
-        self.freezed_index = self.composition_index
+        self.freezed_token_sentence = self.separate_english_token(self.total_token_sentence)  # Bad design here
+        self.freezed_composition_words = self.separate_english_token(self.total_composition_words)
+        self.freezed_index = self.freezed_index + len(self.separate_english_token(self.unfreezed_composition_words))
 
         self.unfreezed_keystrokes = ""
         self.unfreezed_token_sentence = []
         self.unfreezed_composition_words = []
         self.unfreezed_index = 0  # Reset the index should be the last step
+
+    def separate_english_token(self, tokens: list[str]) -> list[str]:
+        #  Special case for English, separate the english word by character
+        result = []
+        for token in tokens:
+            if self.ime_handlers[ENGLISH_IME].is_valid_token(token):
+                result.extend([c for c in token])
+            else:
+                result.append(token)
+        return result
 
     @property
     def token_pool(self) -> list[str]:
@@ -178,9 +188,15 @@ class KeyEventHandler:
                         len(self.total_token_sentence) > 0
                         and self.composition_index > 0
                     ):
-                        self.in_selection_mode = True
                         token = self.total_token_sentence[self.composition_index - 1]
-                        self.candidate_word_list = self.get_token_candidate_words(token)
+                        if not self.ime_handlers[ENGLISH_IME].is_valid_token(token):
+                            self.candidate_word_list = self.get_token_candidate_words(
+                                token
+                            )
+                            if len(self.candidate_word_list) > 1:
+                                # Only none-english token can enter selection mode, and
+                                # the candidate list should have more than 1 candidate
+                                self.in_selection_mode = True
                 elif key == "esc":
                     self._reset_all_states()
                 else:
@@ -569,7 +585,7 @@ class EventWrapper:
                 if self._run_timer is not None:
                     self._run_timer.cancel()
 
-                self._run_timer = threading.Timer(0.5, self.slow_handle)
+                self._run_timer = threading.Timer(0.25, self.slow_handle)
                 self._run_timer.start()
 
         self.update_ui()
