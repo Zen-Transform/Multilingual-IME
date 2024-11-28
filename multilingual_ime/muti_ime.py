@@ -6,7 +6,7 @@ import jieba
 
 from .candidate import Candidate
 from .core.custom_decorators import lru_cache_with_doc, deprecated
-from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME
+from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
 from .ime import IMEFactory
 from .phrase_db import PhraseDataBase
 from .trie import modified_levenshtein_distance
@@ -38,7 +38,7 @@ class KeyEventHandler:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self.logger.addHandler(logging.StreamHandler())
-        self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
+        self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME, SPECIAL_IME]
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
@@ -210,6 +210,10 @@ class KeyEventHandler:
             elif key in TOTAL_VALID_KEYSTROKE_SET:
                 self.unfreezed_keystrokes += key
                 self.unfreezed_composition_words += [key]
+                self.unfreezed_index += 1
+            elif key.startswith("©"):
+                self.unfreezed_keystrokes += key
+                self.unfreezed_composition_words += [key[1:]]
                 self.unfreezed_index += 1
             else:
                 print(f"Invalid key: {key}")
@@ -555,9 +559,9 @@ class EventWrapper:
             if event.name in ["enter", "left", "right", "down", "up", "esc"]:
                 self.my_keyeventhandler.handle_key(event.name)
             else:
-                if keyboard.is_pressed("ctrl"):
+                if keyboard.is_pressed("ctrl") and event.name != "ctrl":
                     self.my_keyeventhandler.handle_key("©" + event.name)
-                elif keyboard.is_pressed("shift"):
+                elif keyboard.is_pressed("shift") and event.name != "shift":
                     self.my_keyeventhandler.handle_key(event.name.upper())
                 else:
                     self.my_keyeventhandler.handle_key(event.name)

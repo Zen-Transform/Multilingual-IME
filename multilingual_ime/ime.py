@@ -12,6 +12,7 @@ BOPOMOFO_IME = "bopomofo"
 CANGJIE_IME = "cangjie"
 PINYIN_IME = "pinyin"
 ENGLISH_IME = "english"
+SPECIAL_IME = "special"
 
 
 # Define IME DB paths
@@ -19,6 +20,9 @@ BOPOMOFO_IME_DB_PATH = Path(__file__).parent / "src" / "bopomofo_keystroke_map.d
 CANGJIE_IME_DB_PATH = Path(__file__).parent / "src" / "cangjie_keystroke_map.db"
 PINYIN_IME_DB_PATH = Path(__file__).parent / "src" / "pinyin_keystroke_map.db"
 ENGLISH_IME_DB_PATH = Path(__file__).parent / "src" / "english_keystroke_map.db"
+SPECIAL_IME_DB_PATH = (
+    Path(__file__).parent / "src" / "special_character_keystroke_map.db"
+)
 
 # Define IME valid keystroke set
 BOPOMOFO_VALID_KEYSTROKE_SET = set("1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/- ")
@@ -292,6 +296,28 @@ class EnglishIME(IME):
         return super().is_valid_token(keystroke)
 
 
+class SpecialCharacterIME(IME):
+    def __init__(self):
+        super().__init__()
+        self.keystroke_map_db = KeystrokeMappingDB(db_path=SPECIAL_IME_DB_PATH)
+
+    def tokenize(self, keystrokes: str) -> list[list[str]]:
+        result = []
+        i = 0
+        while i < len(keystrokes):
+            if keystrokes[i] == "©":
+                result.append("©" + keystrokes[i + 1])
+                i += 2
+            else:
+                i += 1
+        return [result]
+
+    def is_valid_token(self, keystroke):
+        if keystroke.startswith("©") and len(keystroke) == 2:
+            return True
+        return False
+
+
 class IMEFactory:
     @staticmethod
     def create_ime(ime_type: str) -> IME:
@@ -303,5 +329,7 @@ class IMEFactory:
             return PinyinIME()
         if ime_type == ENGLISH_IME:
             return EnglishIME()
+        if ime_type == SPECIAL_IME:
+            return SpecialCharacterIME()
         else:
             raise ValueError(f"IME type {ime_type} not supported")
