@@ -572,6 +572,9 @@ class EventWrapper:
 
     def on_key_event(self, event):
         if event.event_type == keyboard.KEY_DOWN:
+            if self._run_timer is not None:
+                self._run_timer.cancel()
+
             if event.name in ["enter", "left", "right", "down", "up", "esc"]:
                 self.my_keyeventhandler.handle_key(event.name)
             else:
@@ -581,9 +584,6 @@ class EventWrapper:
                     self.my_keyeventhandler.handle_key(event.name.upper())
                 else:
                     self.my_keyeventhandler.handle_key(event.name)
-
-                if self._run_timer is not None:
-                    self._run_timer.cancel()
 
                 self._run_timer = threading.Timer(0.25, self.slow_handle)
                 self._run_timer.start()
