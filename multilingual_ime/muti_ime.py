@@ -5,6 +5,7 @@ from pathlib import Path
 import jieba
 
 from .candidate import Candidate
+from .keystroke_map_db import KeystrokeMappingDB
 from .core.custom_decorators import lru_cache_with_doc, deprecated
 from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
 from .ime import IMEFactory
@@ -29,6 +30,7 @@ TOTAL_VALID_KEYSTROKE_SET = (
 
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
+USER_FREQUENCY_DB_PATH = Path(__file__).parent / "src" / "user_frequency.db"
 
 WITH_COLOR = True
 
@@ -48,11 +50,13 @@ class KeyEventHandler:
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
+        self._user_frequency_db = KeystrokeMappingDB(USER_FREQUENCY_DB_PATH)
 
         self.pre_context = ""
 
         # Config Settings
-        self.AUTO_PHRASE_LEARN = True
+        self.AUTO_PHRASE_LEARN = False
+        self.AUTO_FREQUENCY_LEARN = True
         self.SELECTION_PAGE_SIZE = 5
 
         # State Variables
@@ -201,8 +205,12 @@ class KeyEventHandler:
 
                 return
             else:
-                if key == "enter":
-                    print("Ouputing:", self.composition_string)
+                if key == "enter":  # Conmmit the composition string, update the db & reset all states
+                    self._unfreeze_to_freeze()
+                    if self.AUTO_PHRASE_LEARN:
+                        self.update_user_phrase_db(self.composition_string)
+                    if self.AUTO_FREQUENCY_LEARN:
+                        self.update_user_frequency_db()
                     self._reset_all_states()
                 elif key == "left":
                     self._unfreeze_to_freeze()
@@ -308,7 +316,7 @@ class KeyEventHandler:
     def get_token_distance(self, request_token: str) -> int:
         return self._closest_word_distance(request_token)
 
-    @lru_cache_with_doc(maxsize=128)
+    # @lru_cache_with_doc(maxsize=128)
     def token_to_candidates(self, token: str) -> list[Candidate]:
         """
         Get the possible candidates of the token from all IMEs.
@@ -341,7 +349,22 @@ class KeyEventHandler:
             self.logger.info(f"No candidates found for token '{token}'")
             return [Candidate(token, token, 0, token, 0, "NO_IME")]
 
-        candidates = sorted(candidates, key=lambda x: x.distance)
+
+        candidates = sorted(candidates, key=lambda x: x.distance)  # First sort by distance
+        candidates = sorted(
+            candidates, key=lambda x: x.word_frequency, reverse=True
+        )  # Then sort by frequency
+
+        # FIXME: This is a hack to increase the rank of the token if it is in the user frequency db
+        new_candidates = []
+        for candidate in candidates:
+            if self._user_frequency_db.word_exists(candidate.word):
+                new_candidates.append((candidate, self._user_frequency_db.get_word_frequency(candidate.word)))
+            else:
+                new_candidates.append((candidate, 0))
+        new_candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)
+        candidates = [candidate[0] for candidate in new_candidates]
+
         return candidates
 
     def _get_token_candidate_words(self, token: str) -> list[str]:
@@ -523,6 +546,26 @@ class KeyEventHandler:
             method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
             min_distance = min(min_distance, method_distance)
         return min_distance
+
+    def update_user_frequency_db(self) -> None:
+        def is_chinese_character(char):  # FIXME: Move to Indvidual class or put into IME class
+            return any([
+                '\u4e00'  <= char <= '\u9fff',  # CJK Unified Ideographs
+                '\u3400'  <= char <= '\u4dbf',  # CJK Unified Ideographs Extension A
+                '\u20000' <= char <= '\u2a6df', # CJK Unified Ideographs Extension B
+                '\u2a700' <= char <= '\u2b73f', # CJK Unified Ideographs Extension C
+                '\u2b740' <= char <= '\u2b81f', # CJK Unified Ideographs Extension D
+                '\uf900'  <= char <= '\ufaff',  # CJK Compatibility Ideographs
+            ])
+
+
+        for word in self.total_composition_words:
+            if len(word) == 1 and is_chinese_character(word):
+                if not self._user_frequency_db.word_exists(word):
+                    self._user_frequency_db.insert(None, word, 1)
+                else:
+                    self._user_frequency_db.increment_word_frequency(word)
+                
 
     def update_user_phrase_db(self, text: str) -> None:
         """

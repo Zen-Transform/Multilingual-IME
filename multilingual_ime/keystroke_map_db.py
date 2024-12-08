@@ -105,7 +105,28 @@ class KeystrokeMappingDB:
             return word[0]
         else:
             return None
+        
+    def word_exists(self, word: str) -> bool:
+        self._cursor.execute(
+            "SELECT word FROM keystroke_map WHERE word = ?", (word,)
+        )
+        return bool(self._cursor.fetchone())
+    
+    def increment_word_frequency(self, word: str):
+        self._cursor.execute(
+            "UPDATE keystroke_map SET frequency = frequency + 1 WHERE word = ?",
+            (word,),
+        )
+        self._conn.commit()
 
+    def get_word_frequency(self, word: str) -> int:
+        self._cursor.execute(
+            "SELECT frequency FROM keystroke_map WHERE word = ?", (word,)
+        )
+        if frequency := self._cursor.fetchone():
+            return frequency[0]
+        else:
+            return 0
 
 import pathlib
 
