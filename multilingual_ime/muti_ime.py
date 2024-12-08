@@ -38,7 +38,13 @@ class KeyEventHandler:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self.logger.addHandler(logging.StreamHandler())
-        self.ime_list = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME, SPECIAL_IME]
+        self.ime_list = [
+            BOPOMOFO_IME,
+            CANGJIE_IME,
+            PINYIN_IME,
+            ENGLISH_IME,
+            SPECIAL_IME,
+        ]
         self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
@@ -49,10 +55,6 @@ class KeyEventHandler:
         self.AUTO_PHRASE_LEARN = True
         self.SELECTION_PAGE_SIZE = 5
 
-        # Other State Variables
-        self._last_key_event = None
-        self._timer = None
-
         # State Variables
         self._token_pool_set = set()
         self.have_selected = False
@@ -61,7 +63,6 @@ class KeyEventHandler:
         self.freezed_token_sentence = []
         self.freezed_composition_words = []
 
-        self.unfreezed_index = 0
         self.unfreezed_keystrokes = ""
         self.unfreezed_token_sentence = []
         self.unfreezed_composition_words = []
@@ -79,7 +80,6 @@ class KeyEventHandler:
         self.freezed_token_sentence = []
         self.freezed_composition_words = []
 
-        self.unfreezed_index = 0
         self.unfreezed_keystrokes = ""
         self.unfreezed_token_sentence = []
         self.unfreezed_composition_words = []
@@ -93,14 +93,19 @@ class KeyEventHandler:
 
     def _unfreeze_to_freeze(self) -> None:
         self._token_pool_set = set()
-        self.freezed_token_sentence = self.separate_english_token(self.total_token_sentence)  # Bad design here
-        self.freezed_composition_words = self.separate_english_token(self.total_composition_words)
-        self.freezed_index = self.freezed_index + len(self.separate_english_token(self.unfreezed_composition_words))
+        self.freezed_token_sentence = self.separate_english_token(
+            self.total_token_sentence
+        )  # Bad design here
+        self.freezed_composition_words = self.separate_english_token(
+            self.total_composition_words
+        )
+        self.freezed_index = self.freezed_index + len(
+            self.separate_english_token(self.unfreezed_composition_words)
+        )
 
         self.unfreezed_keystrokes = ""
         self.unfreezed_token_sentence = []
         self.unfreezed_composition_words = []
-        self.unfreezed_index = 0  # Reset the index should be the last step
 
     def separate_english_token(self, tokens: list[str]) -> list[str]:
         #  Special case for English, separate the english word by character
@@ -137,6 +142,10 @@ class KeyEventHandler:
         return self.freezed_index + self.unfreezed_index
 
     @property
+    def unfreezed_index(self) -> int:
+        return len(self.unfreezed_composition_words)
+
+    @property
     def candidate_word_list(self) -> list[str]:
         """
         The candidate word list for the current token in selection mode.
@@ -151,7 +160,8 @@ class KeyEventHandler:
     def selection_index(self) -> int:
         return self._total_selection_index % self.SELECTION_PAGE_SIZE
 
-    def get_composition_string(self) -> str:
+    @property
+    def composition_string(self) -> str:
         return "".join(self.total_composition_words)
 
     def handle_key(self, key: str) -> None:
@@ -159,7 +169,10 @@ class KeyEventHandler:
         if key in special_keys:
             if self.in_selection_mode:
                 if key == "down":
-                    if self._total_selection_index < len(self._total_candidate_word_list) - 1:
+                    if (
+                        self._total_selection_index
+                        < len(self._total_candidate_word_list) - 1
+                    ):
                         self._total_selection_index += 1
                 elif key == "up":
                     if self._total_selection_index > 0:
@@ -168,7 +181,9 @@ class KeyEventHandler:
                     key == "enter"
                 ):  # Overwrite the composition string & reset selection states
                     self.have_selected = True
-                    selected_word = self._total_candidate_word_list[self._total_selection_index]
+                    selected_word = self._total_candidate_word_list[
+                        self._total_selection_index
+                    ]
                     self.freezed_composition_words[self.composition_index - 1] = (
                         selected_word
                     )
@@ -187,7 +202,7 @@ class KeyEventHandler:
                 return
             else:
                 if key == "enter":
-                    print("Ouputing:", self.get_composition_string())
+                    print("Ouputing:", self.composition_string)
                     self._reset_all_states()
                 elif key == "left":
                     self._unfreeze_to_freeze()
@@ -205,8 +220,8 @@ class KeyEventHandler:
                     ):
                         token = self.total_token_sentence[self.composition_index - 1]
                         if not self.ime_handlers[ENGLISH_IME].is_valid_token(token):
-                            self._total_candidate_word_list = self._get_token_candidate_words(
-                                token
+                            self._total_candidate_word_list = (
+                                self._get_token_candidate_words(token)
                             )
                             if len(self._total_candidate_word_list) > 1:
                                 # Only none-english token can enter selection mode, and
@@ -224,8 +239,7 @@ class KeyEventHandler:
                     self.unfreezed_keystrokes = self.unfreezed_keystrokes[:-1]
                     self.unfreezed_composition_words = self.unfreezed_composition_words[
                         :-1
-                    ]
-                    self.unfreezed_index -= 1
+                    ] + [self.unfreezed_token_sentence[-1][:-1]]
                 else:
                     if self.freezed_index > 0:
                         self.freezed_composition_words = (
@@ -237,15 +251,12 @@ class KeyEventHandler:
             elif key == "space":
                 self.unfreezed_keystrokes += " "
                 self.unfreezed_composition_words += [" "]
-                self.unfreezed_index += 1
             elif key in TOTAL_VALID_KEYSTROKE_SET:
                 self.unfreezed_keystrokes += key
                 self.unfreezed_composition_words += [key]
-                self.unfreezed_index += 1
             elif key.startswith("©"):
                 self.unfreezed_keystrokes += key
                 self.unfreezed_composition_words += [key[1:]]
-                self.unfreezed_index += 1
             else:
                 print(f"Invalid key: {key}")
                 return
@@ -280,8 +291,6 @@ class KeyEventHandler:
         )
         self.logger.info(f"Token to word sentence: {time.time() - start_time}")
         self.logger.info(f"Token to word sentences: {self.unfreezed_composition_words}")
-
-        self.unfreezed_index = len(self.unfreezed_composition_words)
 
         return
 
@@ -414,7 +423,7 @@ class KeyEventHandler:
                             best_sentence_tokens[len(phrase) :]
                         )
 
-                return [c for c in best_sentence_tokens[0][0].word] + recursive(
+                return [best_sentence_tokens[0][0].word] + recursive(
                     best_sentence_tokens[1:]
                 )
 
