@@ -11,6 +11,7 @@ from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
 from .ime import IMEFactory
 from .phrase_db import PhraseDataBase
 from .trie import modified_levenshtein_distance
+from .character import is_chinese_character, is_all_chinese_char
 
 from colorama import Fore, Style
 import threading
@@ -548,17 +549,6 @@ class KeyEventHandler:
         return min_distance
 
     def update_user_frequency_db(self) -> None:
-        def is_chinese_character(char):  # FIXME: Move to Indvidual class or put into IME class
-            return any([
-                '\u4e00'  <= char <= '\u9fff',  # CJK Unified Ideographs
-                '\u3400'  <= char <= '\u4dbf',  # CJK Unified Ideographs Extension A
-                '\u20000' <= char <= '\u2a6df', # CJK Unified Ideographs Extension B
-                '\u2a700' <= char <= '\u2b73f', # CJK Unified Ideographs Extension C
-                '\u2b740' <= char <= '\u2b81f', # CJK Unified Ideographs Extension D
-                '\uf900'  <= char <= '\ufaff',  # CJK Compatibility Ideographs
-            ])
-
-
         for word in self.total_composition_words:
             if len(word) == 1 and is_chinese_character(word):
                 if not self._user_frequency_db.word_exists(word):
@@ -577,6 +567,9 @@ class KeyEventHandler:
         """
 
         for phrase in jieba.lcut(text, cut_all=False):
+            if len(phrase) < 2:
+                continue
+
             if not self._user_phrase_db.getphrase(phrase):
                 self._user_phrase_db.insert(phrase, 1)
             else:
