@@ -18,17 +18,18 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pytest = "^8.2.1"
 tqdm = "^4.66.4"
 joblib = "^1.4.2"
 torch = { version="^2.3.1", source = "torch"}
 numpy = "<2.0"
-torchmetrics = "^1.4.0.post0"
 matplotlib = "^3.9.1"
 pypinyin = "^0.52.0"
-
-
 jieba = "^0.42.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.2.1"
+torchmetrics = "^1.4.0.post0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
