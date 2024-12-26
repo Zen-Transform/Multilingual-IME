@@ -11,7 +11,7 @@ MAX_LEVENSHTEIN_DISTANCE = 1
 
 class KeystrokeMappingDB:
     def __init__(self, db_path: str):
-        if not pathlib.Path(db_path).exists():
+        if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
 
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -47,6 +47,11 @@ class KeystrokeMappingDB:
             list: A list of **tuples (keystroke, word, frequency)** containing the closest words
         """
 
+        # Search for the direct match first
+        result = self.get(keystroke)
+        if result:
+            return result
+
         for i in range(MAX_LEVENSHTEIN_DISTANCE + 1):
             result = self.fuzzy_get(keystroke, i)
             if result:
@@ -63,6 +68,9 @@ class KeystrokeMappingDB:
                 frequency INTEGER
             )
             """
+        )
+        self._cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_keystroke ON keystroke_map (keystroke)"
         )
         self._conn.commit()
 
@@ -105,13 +113,11 @@ class KeystrokeMappingDB:
             return word[0]
         else:
             return None
-        
+
     def word_exists(self, word: str) -> bool:
-        self._cursor.execute(
-            "SELECT word FROM keystroke_map WHERE word = ?", (word,)
-        )
+        self._cursor.execute("SELECT word FROM keystroke_map WHERE word = ?", (word,))
         return bool(self._cursor.fetchone())
-    
+
     def increment_word_frequency(self, word: str):
         self._cursor.execute(
             "UPDATE keystroke_map SET frequency = frequency + 1 WHERE word = ?",
@@ -128,12 +134,22 @@ class KeystrokeMappingDB:
         else:
             return 0
 
-import pathlib
 
 if __name__ == "__main__":
+    import pathlib
+    import time
+    db_path = pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
+
     db = KeystrokeMappingDB(
-        pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
+        db_path
     )
+    start_time = time.time()
+    test_cases = ["su3", "cl3", "t ", "gjo4", "s86", "1p4", "ru04", "1l4", "fu04", "503", "g8 ", "al6", "xu4", "b.6", "wj/ ", "1u/4", "fu06", "1l4", "ejo3", "w.6"]
+    for test_case in test_cases:
+        print(db.get_closest(test_case))
+    print("Time taken: ", time.time() - start_time)
+    print("Average time taken: ", (time.time() - start_time) / len(test_cases), f"({len(test_cases)} test cases)")
+
     print(db.get_closest("u04counsel"))
     print(db.closest_word_distance("u04counsel"))
     print(db.is_word_within_distance("u04counsel"))
