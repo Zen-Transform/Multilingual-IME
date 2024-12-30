@@ -57,9 +57,11 @@ class KeyEventHandler:
         self.AUTO_PHRASE_LEARN = False
         self.AUTO_FREQUENCY_LEARN = False
         self.SELECTION_PAGE_SIZE = 5
+        self._MAX_SAVE_PRE_POSSIBLE_SENTENCES = 5
 
         # State Variables
         self._token_pool_set = set()
+        self._pre_possible_sentences = []
         self.have_selected = False
 
         self.freezed_index = 0
@@ -77,6 +79,7 @@ class KeyEventHandler:
 
     def _reset_all_states(self) -> None:
         self._token_pool_set = set()
+        self._pre_possible_sentences = []
         self.have_selected = False
 
         self.freezed_index = 0
@@ -96,6 +99,7 @@ class KeyEventHandler:
 
     def _unfreeze_to_freeze(self) -> None:
         self._token_pool_set = set()
+        self._pre_possible_sentences = []
         self.freezed_token_sentence = self.separate_english_token(
             self.total_token_sentence
         )  # Bad design here
@@ -271,13 +275,17 @@ class KeyEventHandler:
                 return
 
     def slow_handle(self):
+        # Update the token pool
         start_time = time.time()
         self._update_token_pool()
         self.logger.info(f"Updated token pool: {time.time() - start_time}")
         self.logger.info(f"Token pool: {self.token_pool}")
 
+        # Reconstruct the sentence
         start_time = time.time()
-        possible_sentences = self._reconstruct_sentence(self.unfreezed_keystrokes)
+        possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
+            self.unfreezed_keystrokes
+        )
         self.logger.info(f"Reconstructed sentence: {time.time() - start_time}")
         self.logger.info(f"Reconstructed sentences: {possible_sentences}")
 
@@ -285,18 +293,21 @@ class KeyEventHandler:
             self.logger.info("No possible sentences found")
             return
 
+        # Calculate the distance of the possible sentences
         start_time = time.time()
-        possible_sentences = self._filter_possible_sentences_by_distance(
-            possible_sentences
-        )
-        possible_sentences = self._get_best_sentence(possible_sentences)
-        self.unfreezed_token_sentence = possible_sentences
+        possible_sentences = self._sort_possible_sentences(possible_sentences)
+        best_sentences = possible_sentences[0]
+        self._pre_possible_sentences = possible_sentences[
+            : self._MAX_SAVE_PRE_POSSIBLE_SENTENCES
+        ]
+        self.unfreezed_token_sentence = best_sentences
         self.logger.info(f"Filtered sentence: {time.time() - start_time}")
-        self.logger.info(f"Filtered sentences: {possible_sentences}")
+        self.logger.info(f"Best sentences: {best_sentences}")
+        self.logger.info(f"Pre possible sentences: {self._pre_possible_sentences}")
 
         start_time = time.time()
         self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
-            possible_sentences
+            best_sentences
         )
         self.logger.info(f"Token to word sentence: {time.time() - start_time}")
         self.logger.info(f"Token to word sentences: {self.unfreezed_composition_words}")
@@ -387,26 +398,30 @@ class KeyEventHandler:
         candidates = self.token_to_candidates(token)
         return [candidate.word for candidate in candidates]
 
-    def _filter_possible_sentences_by_distance(
+    def _sort_possible_sentences(
         self, possible_sentences: list[list[str]]
     ) -> list[list[str]]:
-        result = [
+        # Sort the possible sentences by the distance
+        possible_sentences_with_distance = [
             dict(
                 sentence=sentence,
                 distance=self._calculate_sentence_distance(sentence),
             )
             for sentence in possible_sentences
         ]
-        result = sorted(result, key=lambda x: x["distance"])
-        min_distance = result[0]["distance"]
-        result = [r for r in result if r["distance"] <= min_distance]
-        return result
-
-    def _get_best_sentence(self, possible_sentences: list[dict]) -> list[str]:
-        possible_sentences = sorted(
-            possible_sentences, key=lambda x: len(x["sentence"])
+        possible_sentences_with_distance = sorted(
+            possible_sentences_with_distance, key=lambda x: x["distance"]
         )
-        return possible_sentences[0]["sentence"]
+        min_distance = possible_sentences_with_distance[0]["distance"]
+        possible_sentences_with_distance = [
+            r for r in possible_sentences_with_distance if r["distance"] <= min_distance
+        ]
+
+        # Sort the possible sentences by the number of tokens
+        possible_sentences = sorted(
+            possible_sentences_with_distance, key=lambda x: len(x["sentence"])
+        )
+        return [r["sentence"] for r in possible_sentences]
 
     def _token_sentence_to_word_sentence(
         self, token_sentence: list[str], context: str = ""
@@ -472,6 +487,41 @@ class KeyEventHandler:
         result = solve_sentence_phrase_matching(sentence_candidates, pre_word)
         # result = solve_sentence_naive_first(sentence_candidates)
         return result
+    def _reconstruct_sentence_from_pre_possible_sentences(
+        self, target_keystroke: str
+    ) -> list[list[str]]:
+        try:
+            possible_sentences = []
+
+            if self._pre_possible_sentences != []:
+                current_best_sentence = "".join(self._pre_possible_sentences[0])
+
+                if len(target_keystroke) >= len(current_best_sentence):
+                    for pre_possible_sentence in self._pre_possible_sentences:
+                        subtracted_string = target_keystroke[
+                            len("".join(pre_possible_sentence[:-1])) :
+                        ]  # Get the remaining string that haven't been processed
+                        possible_sentences.extend(
+                            [
+                                pre_possible_sentence[:-1] + sub_sentence_results
+                                for sub_sentence_results in self._reconstruct_sentence(
+                                    subtracted_string
+                                )
+                            ]
+                        )
+                else:  # The target_keystroke is shorter than the current best sentence, (e.g. backspace)
+                    for pre_possible_sentence in self._pre_possible_sentences:
+                        if "".join(pre_possible_sentence[:-1]).startswith(target_keystroke):
+                            possible_sentences.append(pre_possible_sentence[:-1])
+
+                assert possible_sentences != [], "No possible sentences found in the case of pre_possible_sentences"
+            else:
+                possible_sentences = self._reconstruct_sentence(target_keystroke)
+        except AssertionError as e:
+            self.logger.info(e)
+            possible_sentences = self._reconstruct_sentence(target_keystroke)
+
+        return possible_sentences
 
     def _reconstruct_sentence(self, keystroke: str) -> list[list[str]]:
         """
