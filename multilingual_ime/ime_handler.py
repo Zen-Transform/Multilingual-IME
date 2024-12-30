@@ -5,7 +5,7 @@ from pathlib import Path
 import jieba
 
 from .candidate import Candidate
-from .core.custom_decorators import lru_cache_with_doc
+from .core.custom_decorators import lru_cache_with_doc, deprecated
 from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME
 from .ime import IMEFactory
 from .phrase_db import PhraseDataBase
@@ -14,7 +14,7 @@ from .trie import modified_levenshtein_distance
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
 
-
+@deprecated("This class is deprecated, use KeyEventHandler instead.")
 class IMEHandler:
     def __init__(self, verbose_mode: bool = False) -> None:
         self.logger = logging.getLogger(__name__)
