@@ -46,6 +46,9 @@ class EventWrapper:
         self.my_keyeventhandler = KeyEventHandler(verbose_mode=VERBOSE_MODE)
         print("Initialization time: ", time.time() - start_time)
         self._run_timer = None
+        self.time_spend = 0
+        self.avg_time_spend = 1
+        self.key_count = 0
 
     def update_ui(self):
         print(
@@ -53,16 +56,20 @@ class EventWrapper:
             + f"\t\t {self.my_keyeventhandler.composition_index}"
             + f"\t\t{get_candidate_words_with_cursor(self.my_keyeventhandler.candidate_word_list, self.my_keyeventhandler.selection_index) if self.my_keyeventhandler.in_selection_mode else ''}"
             + f"\t\t{self.my_keyeventhandler.selection_index if self.my_keyeventhandler.in_selection_mode else ''}"
+            + f"\t\tTime spend: {self.time_spend}"
+            + f"\t\tAvg time spend: {self.avg_time_spend}"
         )
 
-    def slow_handle(self):
-        self.my_keyeventhandler.slow_handle()
-        self.update_ui()
+    # def slow_handle(self):
+    #     self.my_keyeventhandler.slow_handle()
+    #     self.update_ui()
 
     def on_key_event(self, event):
         if event.event_type == keyboard.KEY_DOWN:
-            if self._run_timer is not None:
-                self._run_timer.cancel()
+            # if self._run_timer is not None:
+            #     self._run_timer.cancel()
+            self.key_count += 1
+            start_time = time.time()
 
             if event.name in ["enter", "left", "right", "down", "up", "esc"]:
                 self.my_keyeventhandler.handle_key(event.name)
@@ -74,8 +81,12 @@ class EventWrapper:
                 else:
                     self.my_keyeventhandler.handle_key(event.name)
 
-                self._run_timer = threading.Timer(0.25, self.slow_handle)
-                self._run_timer.start()
+            self.my_keyeventhandler.slow_handle()
+            self.time_spend = time.time() - start_time
+            self.avg_time_spend = (self.avg_time_spend * (self.key_count - 1) + self.time_spend) / (self.key_count)
+
+                # self._run_timer = threading.Timer(0.25, self.slow_handle)
+                # self._run_timer.start()
 
         self.update_ui()
 
