@@ -23,10 +23,16 @@ class PhraseDataBase:
                 """
                 CREATE TABLE IF NOT EXISTS phrase_table (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    initial_word TEXT,
                     phrase TEXT,
                     frequency INTEGER
                 )
                 """
+            )
+
+            self._cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS index_initial_word ON phrase_table (initial_word)"""
             )
             self._conn.commit()
 
@@ -42,9 +48,12 @@ class PhraseDataBase:
             return []
         with self._lock:
             self._cursor.execute(
-                f"SELECT phrase, frequency FROM phrase_table WHERE phrase LIKE '{prefix}%'"
+                f"SELECT initial_word, phrase, frequency FROM phrase_table WHERE initial_word = '{prefix}'"
             )
-            return self._cursor.fetchall()
+            return [
+                (phrase, frequency)
+                for (initial_word, phrase, frequency) in self._cursor.fetchall()
+            ]
 
     def insert(self, phrase: str, frequency: int) -> None:
         if not self.getphrase(phrase):
@@ -53,7 +62,7 @@ class PhraseDataBase:
                     f"INSERT INTO phrase_table (phrase, frequency) VALUES ('{phrase}', {frequency})"
                 )
                 self._conn.commit()
-    
+
     def update(self, phrase: str, frequency: int) -> None:
         if not self.getphrase(phrase):
             self.insert(phrase, frequency)
@@ -76,6 +85,8 @@ class PhraseDataBase:
             )
             self._conn.commit()
 
+
 if __name__ == "__main__":
-    db = PhraseDataBase(Path(__file__).parent / "src" / "chinese_phrase.db")
+    db_path = Path(__file__).parent / "src" / "chinese_phrase.db"
+    db = PhraseDataBase(db_path)
     db.create_phrase_table_table()
