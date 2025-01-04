@@ -10,6 +10,7 @@ from .core.custom_decorators import lru_cache_with_doc, deprecated
 from .core.F import modified_levenshtein_distance, is_chinese_character, is_all_chinese_char
 from .ime import IMEFactory, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
 from .phrase_db import PhraseDataBase
+from .muti_config import MultiConfig
 
 
 from .ime import (
@@ -29,31 +30,29 @@ CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
 USER_FREQUENCY_DB_PATH = Path(__file__).parent / "src" / "user_frequency.db"
 
+MAX_SAVE_PRE_POSSIBLE_SENTENCES = 5
 
 class KeyEventHandler:
     def __init__(self, verbose_mode: bool = False) -> None:
+        # Setup logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self.logger.addHandler(logging.StreamHandler())
-        self.ime_list = [
-            BOPOMOFO_IME,
-            CANGJIE_IME,
-            PINYIN_IME,
-            ENGLISH_IME,
-            SPECIAL_IME,
-        ]
-        self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.ime_list}
+
+        # Setup Config
+        self.muti_config = MultiConfig()
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
         self._user_frequency_db = KeystrokeMappingDB(USER_FREQUENCY_DB_PATH)
 
-        self.pre_context = ""
+        # Setup IMEs
+        self.actived_imes:list[str] = self.muti_config.ACTIVE_IME
+        self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.actived_imes}
 
         # Config Settings
-        self.AUTO_PHRASE_LEARN = False
-        self.AUTO_FREQUENCY_LEARN = False
-        self.SELECTION_PAGE_SIZE = 5
-        self._MAX_SAVE_PRE_POSSIBLE_SENTENCES = 5
+        self.AUTO_PHRASE_LEARN = self.muti_config.AUTO_PHRASE_LEARN
+        self.AUTO_FREQUENCY_LEARN = self.muti_config.AUTO_FREQUENCY_LEARN
+        self.SELECTION_PAGE_SIZE = self.muti_config.SELECTION_PAGE_SIZE
 
         # State Variables
         self._token_pool_set = set()
@@ -294,7 +293,7 @@ class KeyEventHandler:
         possible_sentences = self._sort_possible_sentences(possible_sentences)
         best_sentences = possible_sentences[0]
         self._pre_possible_sentences = possible_sentences[
-            : self._MAX_SAVE_PRE_POSSIBLE_SENTENCES
+            : MAX_SAVE_PRE_POSSIBLE_SENTENCES
         ]
         self.unfreezed_token_sentence = best_sentences
         self.logger.info(f"Filtered sentence: {time.time() - start_time}")
@@ -311,7 +310,7 @@ class KeyEventHandler:
         return
 
     def _update_token_pool(self) -> None:
-        for ime_type in self.ime_list:
+        for ime_type in self.actived_imes:
             token_ways = self.ime_handlers[ime_type].tokenize(self.unfreezed_keystrokes)
             for ways in token_ways:
                 for token in ways:
@@ -336,7 +335,7 @@ class KeyEventHandler:
         """
         candidates = []
 
-        for ime_type in self.ime_list:
+        for ime_type in self.actived_imes:
             if self.ime_handlers[ime_type].is_valid_token(token):
                 result = self.ime_handlers[ime_type].get_token_candidates(token)
                 candidates.extend(
@@ -592,7 +591,7 @@ class KeyEventHandler:
         if not self._is_token_in_pool(token):
             return min_distance
 
-        for ime_type in self.ime_list:
+        for ime_type in self.actived_imes:
             if not self.ime_handlers[ime_type].is_valid_token(token):
                 continue
 
