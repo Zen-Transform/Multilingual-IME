@@ -17,7 +17,7 @@ TOTAL_VALID_KEYSTROKE_SET = (
     .union(CANGJIE_VALID_KEYSTROKE_SET)
 )
 
-@deprecated("This class is deprecated, use scripts/muti_ime.py instead.")
+@deprecated("This class is deprecated, use 'scripts/muti_ime.py' instead.")
 class KeyEventProcessor:
     def __init__(self, time_threshold):
         self.time_threshold = time_threshold

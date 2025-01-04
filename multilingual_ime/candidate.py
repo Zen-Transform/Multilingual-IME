@@ -2,7 +2,7 @@ from colorama import Fore, Style
 
 from multilingual_ime.core.custom_decorators import deprecated
 
-@deprecated("This class is deprecated, use Candidate instead.")
+@deprecated("This class is deprecated, use 'Candidate' instead.")
 class CandidateWord:
     def __init__(self, word, keystrokes, word_frequency):
         self.word = word
