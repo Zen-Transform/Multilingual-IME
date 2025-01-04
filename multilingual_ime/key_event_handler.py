@@ -7,11 +7,9 @@ import jieba
 from .candidate import Candidate
 from .keystroke_map_db import KeystrokeMappingDB
 from .core.custom_decorators import lru_cache_with_doc, deprecated
-from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
-from .ime import IMEFactory
+from .core.F import modified_levenshtein_distance, is_chinese_character, is_all_chinese_char
+from .ime import IMEFactory, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
 from .phrase_db import PhraseDataBase
-from .trie import modified_levenshtein_distance
-from .character import is_chinese_character, is_all_chinese_char
 
 
 from .ime import (
@@ -30,8 +28,6 @@ TOTAL_VALID_KEYSTROKE_SET = (
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
 USER_PHRASE_DB_PATH = Path(__file__).parent / "src" / "user_phrase.db"
 USER_FREQUENCY_DB_PATH = Path(__file__).parent / "src" / "user_frequency.db"
-
-WITH_COLOR = True
 
 
 class KeyEventHandler:
