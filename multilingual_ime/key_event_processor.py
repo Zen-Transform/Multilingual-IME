@@ -3,6 +3,7 @@ import time
 import threading
 
 from .ime_handler import IMEHandler
+from multilingual_ime.core.custom_decorators import deprecated
 from .ime import (
     BOPOMOFO_VALID_KEYSTROKE_SET,
     ENGLISH_VALID_KEYSTROKE_SET,
@@ -16,7 +17,7 @@ TOTAL_VALID_KEYSTROKE_SET = (
     .union(CANGJIE_VALID_KEYSTROKE_SET)
 )
 
-
+@deprecated("This class is deprecated, use scripts/muti_ime.py instead.")
 class KeyEventProcessor:
     def __init__(self, time_threshold):
         self.time_threshold = time_threshold
