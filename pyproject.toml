@@ -1,12 +1,18 @@
-[tool.poetry]
+[project]
 name = "multilingual-ime"
 version = "0.1.4"
 description = ""
-authors = ["JY <90738099+JY9150@users.noreply.github.com>"]
+authors = [
+    { name = "JY9150", email = "90738099+JY9150@users.noreply.github.com"}
+]
+readme = "README.md"
+"requires-python" = ">=3.9,<3.10"
 repository = "https://github.com/Zen-Transform/Multilingual-IME"
 keywords = ["IME", "Multilingual"]
+dynamic =[ "dependencies" ]
+
+[tool.poetry]
 package-mode = true
-readme = "README.md"
 packages = [
     { include = "multilingual_ime", from = "." },
     { include = "data_preprocess", from = "." }
@@ -17,7 +23,6 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
 tqdm = "^4.66.4"
 joblib = "^1.4.2"
 torch = { version="^2.3.1", source = "torch"}
@@ -27,12 +32,12 @@ pypinyin = "^0.52.0"
 jieba = "^0.42.1"
 keyboard = "^0.13.5"
 
-[tool.poetry.dev-dependencies]
+[poetry.group.dev.dependencies]
 pytest = "^8.2.1"
 torchmetrics = "^1.4.0.post0"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [[tool.poetry.source]]
