@@ -1,5 +1,5 @@
 
-from multilingual_ime.data_preprocess.keystroke_converter import KeyStrokeConverter
+from data_preprocess.keystroke_converter import KeyStrokeConverter
 
 def test_keystroke_converter():
     assert KeyStrokeConverter.convert("你好棒", convert_type="cangjie") == "onf vnd dqkq "
