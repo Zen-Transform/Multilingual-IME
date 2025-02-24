@@ -14,6 +14,7 @@ from torchmetrics.classification import (
 
 from multilingual_ime.ime import PINYIN_IME, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME
 from multilingual_ime.ime_detector import IMETokenDetectorDL
+from multilingual_ime.ime import IMEFactory
 
 
 # Test Fix Parameters
@@ -53,8 +54,8 @@ IME_DETECTORDL_PATH_MAP = {
     ENGLISH_IME: ENGLISH_IME_TOKEN_DETECTOR_MODEL_PATH,
 }
 
+random.seed(42)
 DATA_AND_LABEL_SPLITTER = "\t"
-NUM_OF_CLASSES = 2
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
 
@@ -66,31 +67,30 @@ def error_rate_to_string(error_rate: float) -> str:
 
 if __name__ == "__main__":
     # Test Parameters
-    TEST_CASES_NUMBER = 10000
+    TEST_CASES_NUMBER = 10
     TEST_ERROR_RATE = 0
     TEST_IMES = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
+    TEST_WITH_IME_RULE_FILTER = True
     # Settings
     SHOW_PLOT_AND_WAIT = True
 
-
     error_rate_str = error_rate_to_string(TEST_ERROR_RATE)
 
-    for ime in TEST_IMES:
+    for ime_type in TEST_IMES:
         accuracy_metric = BinaryAccuracy()
         precision_metric = BinaryF1Score()
         recall_metric = BinaryPrecision()
         f1_score_metric = BinaryRecall()
         confusion_matrix = BinaryConfusionMatrix()
 
-        TEST_FILE_PATH = (
-            f"Datasets\\Test_Datasets\\labeled_{ime}_{error_rate_str}_test.txt"
-        )
-        TEST_RESULT_IMAGE_PATH = f"reports\\tokenDetectorDL_{ime}_{error_rate_str}_test_result_{TIMESTAMP}.png"
+        TEST_FILE_PATH = f"Datasets\\Test_Datasets\\labeled_wlen1_{ime_type}_{error_rate_str}_test.txt"
+        TEST_RESULT_IMAGE_PATH = f"reports\\tokenDetectorDL_{ime_type}_{error_rate_str}_test_result_{TIMESTAMP}.png"
 
         ime_detectorDL = IMETokenDetectorDL(
-            IME_DETECTORDL_PATH_MAP[ime],
+            IME_DETECTORDL_PATH_MAP[ime_type],
             device="cuda",
         )
+        ime_detectorWithRule = IMEFactory.create_ime(ime_type)
 
         print("Loading Test Data")
         with open(TEST_FILE_PATH, "r", encoding="utf-8") as f:
@@ -102,12 +102,20 @@ if __name__ == "__main__":
                 :TEST_CASES_NUMBER
             ]
 
-        with tqdm(total=len(test_data), desc=f"Testing IME DetectorDL {ime}") as pbar:
+        with tqdm(
+            total=len(test_data), desc=f"Testing IME DetectorDL {ime_type}"
+        ) as pbar:
             all_labels = []
             all_preds = []
 
             for test_case, y_label in test_data:
-                y_pred = torch.tensor([int(ime_detectorDL.predict(test_case))])
+                if TEST_WITH_IME_RULE_FILTER:
+                    y_pred = torch.tensor(
+                        [int(ime_detectorWithRule.is_valid_token(test_case))]
+                    )
+                else:
+                    y_pred = torch.tensor([int(ime_detectorDL.predict(test_case))])
+
                 y_label = torch.tensor([int(y_label)])
 
                 all_labels.append(y_label)
@@ -116,8 +124,8 @@ if __name__ == "__main__":
 
         all_labels = torch.cat(all_labels)
         all_preds = torch.cat(all_preds)
-        print("all_labels", all_labels, all_labels.shape, all_labels.dtype)
-        print("all_preds", all_preds, all_preds.shape, all_preds.dtype)
+        # print("all_labels", all_labels, all_labels.shape, all_labels.dtype)
+        # print("all_preds", all_preds, all_preds.shape, all_preds.dtype)
 
         accuracy = accuracy_metric(all_preds, all_labels)
         precision = precision_metric(all_preds, all_labels)
@@ -127,14 +135,15 @@ if __name__ == "__main__":
 
         # Draw Image
         fig, ax = confusion_matrix.plot()
-        ax.set_title(f"IME DetectorDL: {ime} \n Confusion Matrix")
+        ax.set_title(f"IME DetectorDL: {ime_type} \n Confusion Matrix")
 
-        text_x_pos = NUM_OF_CLASSES
         plt.text(
-            text_x_pos,
-            0.2,
+            1.8,
+            0.4,
             f"Total Test Cases: {len(test_data)}\n"
             + f"Error Rate: {TEST_ERROR_RATE}\n"
+            + f"IME Type: {ime_type}\n"
+            + f"IME Rule Filter: {TEST_WITH_IME_RULE_FILTER}\n"
             + f"Accuracy: {accuracy}\n"
             + f"Precision: {precision}\n"
             + f"Recall: {recall}\n"
