@@ -676,5 +676,77 @@
         "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_english_0_redundant_test.txt",
         "language": "english",
         "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in training datasets and label them with bopomofo",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_wlen1_bopomofo_r0-05_train.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in testing datasets and label them with bopomofo",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_wlen1_bopomofo_r0-05_test.txt",
+        "language": "bopomofo",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in training datasets and label them with cangjie",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_wlen1_cangjie_r0-05_train.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in testing datasets and label them with cangjie",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_wlen1_cangjie_r0-05_test.txt",
+        "language": "cangjie",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in training datasets and label them with pinyin",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_wlen1_pinyin_r0-05_train.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in testing datasets and label them with pinyin",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_wlen1_pinyin_r0-05_test.txt",
+        "language": "pinyin",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in training datasets and label them with english",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Train_Datasets\\",
+        "output_file_path": ".\\Datasets\\Train_Datasets\\labeled_wlen1_english_r0-05_train.txt",
+        "language": "english",
+        "status": "done"
+    },
+    {
+        "mode": "merge",
+        "description": "Merge all r0-05 files in testing datasets and label them with english",
+        "prefix": "r0-05",
+        "input_file_paths": ".\\Datasets\\Test_Datasets\\",
+        "output_file_path": ".\\Datasets\\Test_Datasets\\labeled_wlen1_english_r0-05_test.txt",
+        "language": "english",
+        "status": "done"
     }
 ]
