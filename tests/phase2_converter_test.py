@@ -7,6 +7,7 @@ from datetime import datetime
 from multilingual_ime.ime import IMEFactory
 from data_preprocess.typo_generater import TypoGenerater
 from data_preprocess.keystroke_converter import KeyStrokeConverter
+from multilingual_ime.ime_converter import ChineseIMEConverter, EnglishIMEConverter
 from multilingual_ime.ime import PINYIN_IME, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME
 
 random.seed(42)
@@ -17,6 +18,20 @@ IMES = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
 TEST_CHINESE_FILE_PATH = f"Datasets\\Plain_Text_Datasets\\wlen1-1_cc100_test.txt"
 TEST_ENGLISH_FILE_PATH = (
     f"Datasets\\Plain_Text_Datasets\\wlen1-1_English_multi_test.txt"
+)
+
+# Old Converter
+test_bopomofo_converter = ChineseIMEConverter(
+    "multilingual_ime\\src\\keystroke_mapping_dictionary\\bopomofo_dict_with_frequency.json"
+)
+test_cangjie_converter = ChineseIMEConverter(
+    "multilingual_ime\\src\\keystroke_mapping_dictionary\\cangjie_dict_with_frequency.json"
+)
+test_pinyin_converter = ChineseIMEConverter(
+    "multilingual_ime\\src\\keystroke_mapping_dictionary\\pinyin_dict_with_frequency.json"
+)
+test_english_converter = EnglishIMEConverter(
+    "multilingual_ime\\src\\keystroke_mapping_dictionary\\english_dict_with_frequency.json"
 )
 
 
@@ -55,14 +70,29 @@ def error_rate_to_string(error_rate: float) -> str:
 
 if __name__ == "__main__":
     # Test Parameters
-    TEST_CASES_NUMBER = 10
+    TEST_CASES_NUMBER = 10000
     TEST_ERROR_RATE = 0
+    TEST_MODE = "sqlite"  # "sqlite" or "trie"
     # Settings
     error_rate_str = error_rate_to_string(TEST_ERROR_RATE)
 
     for ime_type in IMES:
-        TEST_RESULT_JSON_PATH = f"reports\\phase2_converter_{ime_type}_{error_rate_str}_test_result_{TIMESTAMP}.json"
-        test_ime_handler = IMEFactory.create_ime(ime_type)
+        TEST_RESULT_JSON_PATH = f"reports\\phase2_converter_{TEST_MODE}_{ime_type}_{error_rate_str}_test_result_{TIMESTAMP}.json"
+        if TEST_MODE == "sqlite":
+            test_ime_handler = IMEFactory.create_ime(ime_type)
+        elif TEST_MODE == "trie":
+            if ime_type == BOPOMOFO_IME:
+                test_ime_converter = test_bopomofo_converter
+            elif ime_type == CANGJIE_IME:
+                test_ime_converter = test_cangjie_converter
+            elif ime_type == PINYIN_IME:
+                test_ime_converter = test_pinyin_converter
+            elif ime_type == ENGLISH_IME:
+                test_ime_converter = test_english_converter
+            else:
+                raise ValueError("Invalid IME Type")
+        else:
+            raise ValueError("Invalid Test Mode")
 
         print("Generating Test Data")
         test_data = []
@@ -85,18 +115,24 @@ if __name__ == "__main__":
 
         print("Start Testing")
         with tqdm(
-            total=len(test_data), desc=f"Testing IME Converter {ime_type}"
+            total=len(test_data), desc=f"Testing IME Converter {ime_type} with {TEST_MODE}"
         ) as pbar:
             correct = 0
             mrr_scores = []
-            logs = []
+            time_spends = []
+            # logs = []
 
             for test_x, y_label in test_data:
-                y_pred = test_ime_handler.get_token_candidates(test_x)
-                y_pred = [token[1] for token in y_pred]
-
-                # print("y_label", y_label)
-                # print("y_pred", y_pred)
+                if TEST_MODE == "sqlite":
+                    start_time = datetime.now()
+                    y_pred = test_ime_handler.get_token_candidates(test_x)
+                    time_spend = datetime.now() - start_time
+                    y_pred = [token[1] for token in y_pred]
+                else:
+                    start_time = datetime.now()
+                    y_pred = test_ime_converter.get_candidates(test_x)
+                    time_spend = datetime.now() - start_time
+                    y_pred = [token.word for token in y_pred]
 
                 if y_label in y_pred:
                     correct += 1
@@ -104,23 +140,27 @@ if __name__ == "__main__":
                 else:
                     mrr_scores.append(0)
 
-                logs.append(
-                    {
-                        "Input": test_x,
-                        "Output": y_pred,
-                        "Correnct": y_label,
-                        "MRR Score": mrr_scores[-1],
-                    }
-                )
+                time_spends.append(time_spend.total_seconds())
+                # logs.append(
+                #     {
+                #         "Input": test_x,
+                #         "Output": y_pred,
+                #         "Correnct": y_label,
+                #         "MRR": mrr_scores[-1],
+                #         "Time Spend": time_spend.total_seconds(),
+                #     }
+                # )
                 pbar.update(1)
 
         with open(TEST_RESULT_JSON_PATH, "w", encoding="utf-8") as f:
             json.dump(
                 {
+                    "Mode": f"{TEST_MODE}, ime_type: {ime_type}, error_rate: {error_rate_str}",
+                    "Total Test Cases": len(test_data),
                     "Accuracy": correct / len(test_data),
-                    "Avg.MRR": sum(mrr_scores) / len(mrr_scores),
-                    "MRR": mrr_scores,
-                    "Logs": logs,
+                    "Avg. MRR": sum(mrr_scores) / len(mrr_scores),
+                    "Avg. Time Spend": sum(time_spends) / len(time_spends),
+                    # "Logs": logs,
                 },
                 f,
                 ensure_ascii=False,

@@ -67,12 +67,12 @@ def error_rate_to_string(error_rate: float) -> str:
 
 if __name__ == "__main__":
     # Test Parameters
-    TEST_CASES_NUMBER = 10
+    TEST_CASES_NUMBER = 10000
     TEST_ERROR_RATE = 0
     TEST_IMES = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
     TEST_WITH_IME_RULE_FILTER = True
     # Settings
-    SHOW_PLOT_AND_WAIT = True
+    SHOW_PLOT_AND_WAIT = False
 
     error_rate_str = error_rate_to_string(TEST_ERROR_RATE)
 
