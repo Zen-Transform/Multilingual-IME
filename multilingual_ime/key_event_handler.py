@@ -1,5 +1,6 @@
 import time
 import logging
+import heapq
 from pathlib import Path
 
 import jieba
@@ -7,8 +8,19 @@ import jieba
 from .candidate import Candidate
 from .keystroke_map_db import KeystrokeMappingDB
 from .core.custom_decorators import lru_cache_with_doc, deprecated
-from .core.F import modified_levenshtein_distance, is_chinese_character, is_all_chinese_char
-from .ime import IMEFactory, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
+from .core.F import (
+    modified_levenshtein_distance,
+    is_chinese_character,
+    is_all_chinese_char,
+)
+from .ime import (
+    IMEFactory,
+    BOPOMOFO_IME,
+    CANGJIE_IME,
+    ENGLISH_IME,
+    PINYIN_IME,
+    SPECIAL_IME,
+)
 from .phrase_db import PhraseDataBase
 from .muti_config import MultiConfig
 
@@ -32,6 +44,7 @@ USER_FREQUENCY_DB_PATH = Path(__file__).parent / "src" / "user_frequency.db"
 
 MAX_SAVE_PRE_POSSIBLE_SENTENCES = 5
 
+
 class KeyEventHandler:
     def __init__(self, verbose_mode: bool = False) -> None:
         # Setup logger
@@ -46,8 +59,10 @@ class KeyEventHandler:
         self._user_frequency_db = KeystrokeMappingDB(USER_FREQUENCY_DB_PATH)
 
         # Setup IMEs
-        self.actived_imes:list[str] = self.muti_config.ACTIVE_IME
-        self.ime_handlers = {ime: IMEFactory.create_ime(ime) for ime in self.actived_imes}
+        self.actived_imes: list[str] = self.muti_config.ACTIVE_IME
+        self.ime_handlers = {
+            ime: IMEFactory.create_ime(ime) for ime in self.actived_imes
+        }
 
         # Config Settings
         self.AUTO_PHRASE_LEARN = self.muti_config.AUTO_PHRASE_LEARN
@@ -293,7 +308,7 @@ class KeyEventHandler:
         possible_sentences = self._sort_possible_sentences(possible_sentences)
         best_sentences = possible_sentences[0]
         self._pre_possible_sentences = possible_sentences[
-            : MAX_SAVE_PRE_POSSIBLE_SENTENCES
+            :MAX_SAVE_PRE_POSSIBLE_SENTENCES
         ]
         self.unfreezed_token_sentence = best_sentences
         self.logger.info(f"Filtered sentence: {time.time() - start_time}")
@@ -315,6 +330,17 @@ class KeyEventHandler:
             for ways in token_ways:
                 for token in ways:
                     self._token_pool_set.add(token)
+
+        # Cut large token to small token
+        # TODO: This is a hack, need to find a better way to handle this
+        sorted_tokens = sorted(
+            list(self._token_pool_set), key=lambda x: len(x), reverse=True
+        )
+        for token in sorted_tokens:
+            if len(token) > 1:
+                for i in range(1, len(token)):
+                    if token[:i] in self._token_pool_set:
+                        self._token_pool_set.add(token[i:])
 
     def _is_token_in_pool(self, token: str) -> bool:
         return token in self._token_pool_set
@@ -482,6 +508,7 @@ class KeyEventHandler:
         result = solve_sentence_phrase_matching(sentence_candidates, pre_word)
         # result = solve_sentence_naive_first(sentence_candidates)
         return result
+
     def _reconstruct_sentence_from_pre_possible_sentences(
         self, target_keystroke: str
     ) -> list[list[str]]:
@@ -506,10 +533,14 @@ class KeyEventHandler:
                         )
                 else:  # The target_keystroke is shorter than the current best sentence, (e.g. backspace)
                     for pre_possible_sentence in self._pre_possible_sentences:
-                        if "".join(pre_possible_sentence[:-1]).startswith(target_keystroke):
+                        if "".join(pre_possible_sentence[:-1]).startswith(
+                            target_keystroke
+                        ):
                             possible_sentences.append(pre_possible_sentence[:-1])
 
-                assert possible_sentences != [], "No possible sentences found in the case of pre_possible_sentences"
+                assert (
+                    possible_sentences != []
+                ), "No possible sentences found in the case of pre_possible_sentences"
             else:
                 possible_sentences = self._reconstruct_sentence(target_keystroke)
         except AssertionError as e:
@@ -624,3 +655,173 @@ class KeyEventHandler:
                 self._user_phrase_db.insert(phrase, 1)
             else:
                 self._user_phrase_db.increment_frequency(phrase)
+
+    def new_reconstruct(self, keystroke: str, top_n: int = 10) -> list[list[str]]:
+        class SentenceGraph:
+            def __init__(self) -> None:
+                self._graph = {}
+
+            @property
+            def num_of_node(self) -> int:
+                return len(self._graph)
+
+            def add_edge(
+                self, u_id: str, v_id: str, distance: int, direct: bool = True
+            ) -> None:
+                if u_id not in self._graph:
+                    self._graph[u_id] = [(v_id, distance)]
+                else:
+                    if (v_id, distance) not in self._graph[u_id]:
+                        self._graph[u_id].append((v_id, distance))
+
+                if v_id not in self._graph:
+                    if direct:
+                        self._graph[v_id] = []
+                    else:
+                        self._graph[v_id] = [(u_id, distance)]
+
+            def find_shortest_paths(self, start_id: str, end_id: str) -> list[str]:
+                # By Dijkstra
+                predcessor = {id: None for id in self._graph}
+                distance = {id: None for id in self._graph}
+                distance[start_id] = 0
+
+                priorty_queue = [(0, start_id)]
+                while priorty_queue:
+                    current_distance, current_id = heapq.heappop(priorty_queue)
+
+                    for neighbor_id, neighbor_weight in self._graph[current_id]:
+                        neg_new_distance = current_distance + neighbor_weight
+
+                        if distance[neighbor_id] is None:
+                            distance[neighbor_id] = neg_new_distance
+                            heapq.heappush(
+                                priorty_queue, (neg_new_distance, neighbor_id)
+                            )
+                            predcessor[neighbor_id] = set([current_id])
+                        else:
+
+                            if neg_new_distance < distance[neighbor_id]:
+                                distance[neighbor_id] = neg_new_distance
+                                heapq.heappush(
+                                    priorty_queue, (neg_new_distance, neighbor_id)
+                                )
+                                predcessor[neighbor_id] = set([current_id])
+                            elif neg_new_distance == distance[neighbor_id]:
+                                predcessor[neighbor_id].add(current_id)
+
+                # Get the path
+                def get_path(
+                    predcessor: dict[str, set], end_id: str
+                ) -> list[list[str]]:
+
+                    def dfs(current_id: str) -> list[list[str]]:
+                        if current_id == start_id:
+                            return [[start_id]]
+
+                        if predcessor[current_id] is None:
+                            return []
+
+                        paths = []
+                        for pred in predcessor[current_id]:
+                            paths.extend([path + [current_id] for path in dfs(pred)])
+                        return paths
+
+                    return dfs(end_id)
+
+                return get_path(predcessor, end_id)
+
+        # Get all possible seps
+        possible_seps = []
+        for ime_type in self.actived_imes:
+            token_ways = self.ime_handlers[ime_type].tokenize(keystroke)
+            possible_seps.extend(token_ways)
+
+        # Filte out empty sep
+        possible_seps = [sep for sep in possible_seps if sep]
+        # Filter out same sep
+        possible_seps = [list(t) for t in set(tuple(token) for token in possible_seps)]
+
+        token_pool = set([token for sep in possible_seps for token in sep])
+        new_possible_seps = []
+        for sep in possible_seps:
+            new_sep = []
+            for token in sep:
+                is_sep = False
+                for i in range(1, len(token)):
+                    if token[:i] in token_pool:
+                        new_sep.extend([token[:i], token[i:]])
+                        is_sep = True
+                        break
+                if not is_sep:
+                    new_sep.append(token)
+
+            new_possible_seps.append(new_sep)
+        new_possible_seps.extend(possible_seps)
+
+        self.logger.info(f"Creating Graph with {len(new_possible_seps)} possible seps")
+        id_maps = {}
+        graph = SentenceGraph()
+        for sep in new_possible_seps:
+            prev_str = ""
+            prev_token_id = "<start>"
+            for token in sep:
+                empty_token_id = f"<none>_{len(prev_str)}_{len(prev_str)}"
+                token_id = f"{token}_{len(prev_str)}_{len(prev_str + token)}"  # Hash it
+
+                id_maps[token_id] = token
+                graph.add_edge(prev_token_id, empty_token_id, 0)
+                graph.add_edge(empty_token_id, token_id, self.get_token_distance(token))
+                prev_str += token
+                prev_token_id = token_id
+            graph.add_edge(prev_token_id, "<end>", 0)
+
+        shortest_paths = graph.find_shortest_paths("<start>", "<end>")
+        self.logger.info(f"Found {len(shortest_paths)} shortest paths")
+
+        possible_paths = []
+        for path in shortest_paths:
+            path = list(
+                filter(
+                    lambda x: x not in ["<start>", "<end>"]
+                    and not x.startswith("<none>"),
+                    path,
+                )
+            )
+            possible_paths.append([id_maps[id] for id in path])
+        possible_paths = sorted(possible_paths, key=lambda x: len(x), reverse=False)
+
+        return possible_paths[:top_n]
+
+    def get_token_distance(self, token: str) -> int:
+        min_distance = float("inf")
+
+        for ime_type in self.actived_imes:
+            if not self.ime_handlers[ime_type].is_valid_token(token):
+                continue
+
+            method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
+            min_distance = min(min_distance, method_distance)
+        return min_distance
+
+    def phase1(self, keystroke: str) -> list[str]:
+        self.unfreezed_keystrokes = keystroke
+        self._update_token_pool()
+        possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
+            self.unfreezed_keystrokes
+        )
+        possible_sentences = self._sort_possible_sentences(possible_sentences)
+        return possible_sentences
+
+
+if __name__ == "__main__":
+    handler = KeyEventHandler()
+    phase1_result = handler.phase1("zuekua jwjc yk6hqgdi factories")
+    new_result = handler.new_reconstruct("zuekua jwjc yk6hqgdi factories")
+    print("---------------------")
+    print("PHASE1", phase1_result)
+    print("NEW", new_result)
+    print("---------------------")
+    print("PHASE1", handler._calculate_sentence_distance(phase1_result[0]))
+    print("NEW", handler._calculate_sentence_distance(new_result[0]))
+    print("---------------------")
