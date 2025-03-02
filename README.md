@@ -2,16 +2,27 @@
 
 ![pypi](https://img.shields.io/pypi/v/multilingual_ime)
 
-// Tag on release, oenssf, lastes build, ci/cd
+Multilingual IME is a package of input method editor (IME) core that leverage AI and algorithms to enable cross-typing between 3+ different input methods.
+There are two derivative user interface implementations compatible with both Windows and the Chrome browser ([See related projects](#related-projects)).
 
-Multilingual IME is a package of input method editor (IME) cores that support cross-typing between 3+ different input methods.
+Current supported input methods
 
-Current supported input method
+| Input Methods | Languages | Dictionary size |
+| ---- | ----- | :---- |
+| English | English | 10,000 words |
+| Bopomofo (Zhuyin) 注音 | Chinese | 15,7744 characters |
+| Cangjie 倉頡 | Chinese | 6,308 characters |
+ | Pinyin 無聲調拼音 | Chinese | 6,235 characters|
 
-* English
-* Bopomofo (Zhuyin) 注音
-* Cangjie 倉頡
-* Pinyin 無聲調拼音
+| Languages | Vocabulary database |
+| ---- | :---- |
+| English | X |
+| Chinese (Mandarin) | 12,645 phrases|
+
+### Related Projects
+
+* [PolyKey-win](https://github.com/Zen-Transform/polykey-win) : Input method editor on Windows
+* [PolyKey-web](https://github.com/Zen-Transform/PolyKey-web) : Input method editor as Chrome extension
 
 ## Install
 
@@ -22,16 +33,21 @@ Current supported input method
 ### Run Example
 
 ```shell
+# Install package
 > pip install multlingual_ime
+# Run cli version of input method
+> python -m multilingual_ime.ime_cli
 ```
-
-
 
 ## Development
 
 ### Dependency
 
-Package manager: [Poetry](https://python-poetry.org/)
+Package manager: [Poetry](https://python-poetry.org/)  
+
+* python: >=3.9 <3.10
+* pytorch: ^2.3.1
+* numpy: <2.0
 
 ### Project Structure
 
@@ -42,29 +58,31 @@ Package manager: [Poetry](https://python-poetry.org/)
   * Train_Datasets
 * multilingual_ime
   * core: core functions
-  * data_preprocess: codes for data preprocessing
-  * src: location for none code source object
-  * \*.py: main IME handler code
-* references: storing referece paper or documents
-* reports: storing system tesing report or log files
-* scripts: short script for data generations or others
-* tests: storing unit test code
+  * src: location for none codes source object
+  * \*.py: main IME handler codes
+* data_precrocess: data preprocessing library
+* reports:  system test reports and log files
+* scripts: short scripts for data generations and others
+* tests: system performance test codes
+* unit_tests: unit test codess
 
 ### How to run script
 
 ```shell
-# install package
+# install all dependencies
+poetry install
+
+# Add package to dependencies
 poetry add [package]
 
 # run module as script
 python -m [module_name].[script]
 ```
 
-## Related Project
-
-* PolyKey: Input method editor on Windows
-* PolyKey-Web: Input method editor as Chrome extension
-
 ## Bug Report
 
 Please report any issue to [here](https://github.com/Zen-Transform/Multilingual-IME/issues).
+
+## License
+
+Multilingual IME is release under [MIT License](https://github.com/Zen-Transform/Multilingual-IME?tab=MIT-1-ov-file).
