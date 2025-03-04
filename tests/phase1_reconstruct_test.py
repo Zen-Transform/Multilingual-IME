@@ -1,17 +1,17 @@
 import os
+from datetime import datetime
 import random
 import json
+
 from tqdm import tqdm
-from datetime import datetime
 
-
+from data_preprocess.typo_generater import TypoGenerater
 from multilingual_ime.key_event_handler import KeyEventHandler
 from multilingual_ime.ime import PINYIN_IME, BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME
 
 
 random.seed(42)
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H-%M")
-IMES = [BOPOMOFO_IME, CANGJIE_IME, PINYIN_IME, ENGLISH_IME]
 
 
 def error_rate_to_string(error_rate: float) -> str:
@@ -35,178 +35,175 @@ def get_random_line_efficient(filename):
         return file.readline().decode("utf-8").strip()
 
 
-def load_tokens(file_path: str, max_size: int):
-    lines = [get_random_line_efficient(file_path) for _ in range(max_size)]
-    test_data = [line.strip().split("\t") for line in lines]
-    test_data = [
-        line[0]
-        for line in test_data
-        if len(line) == 2 and line[1] == "1" and len(line[0]) != 0
-    ]
-    random.shuffle(test_data)
-    return test_data
+def get_token_efficient(ime_type: str, error_rate: int) -> str:
+    while True:
+        error_rate_str = error_rate_to_string(error_rate)
+        bopomofo_token_test_data_path = (
+            f"Datasets\\Test_Datasets\\labeled_wlen1_bopomofo_{error_rate_str}_test.txt"
+        )
+        cangjie_token_test_data_path = (
+            f"Datasets\\Test_Datasets\\labeled_wlen1_cangjie_{error_rate_str}_test.txt"
+        )
+        pinyin_token_test_datat_path = (
+            f"Datasets\\Test_Datasets\\labeled_wlen1_pinyin_{error_rate_str}_test.txt"
+        )
+        english_token_test_data_path = (
+            f"Datasets\\Test_Datasets\\labeled_wlen1_english_{error_rate_str}_test.txt"
+        )
+
+        if ime_type == BOPOMOFO_IME:
+            line = get_random_line_efficient(bopomofo_token_test_data_path)
+        elif ime_type == CANGJIE_IME:
+            line = get_random_line_efficient(cangjie_token_test_data_path)
+        elif ime_type == PINYIN_IME:
+            line = get_random_line_efficient(pinyin_token_test_datat_path)
+        elif ime_type == ENGLISH_IME:
+            line = get_random_line_efficient(english_token_test_data_path)
+        else:
+            raise ValueError(f"IME {ime_type} is not supported")
+
+        items = line.strip().split("\t")
+
+        if len(items) == 2 and items[1] == "1" and len(items[0]) != 0:
+            return items[0]
 
 
-def list_get(list: list, item: any, default: any):
-    try:
-        return list[item]
-    except IndexError:
-        return default
+def generate_test_case(
+    mix_imes: list[str], n_token: int, error_rate: int, one_time_change: bool
+) -> tuple:
+    # Generate IME list
+    if one_time_change:
+        mix_imes = mix_imes.copy()
+        random.shuffle(mix_imes)
+        duplicate = random.choices(mix_imes, k=n_token - len(mix_imes))
+
+        ime_list = []
+        for ime_type in mix_imes:
+            ime_list.extend([ime_type] * (duplicate.count(ime_type) + 1))
+
+        assert len(ime_list) == n_token
+    else:
+        ime_list = random.choices(mix_imes, k=n_token)
+
+    # Generate tokens
+    tokens = []
+    prev_ime_type = None
+    for ime_type in ime_list:
+        if prev_ime_type == ENGLISH_IME:
+            tokens.append(" ")
+
+        token = get_token_efficient(ime_type=ime_type, error_rate=error_rate)
+        tokens.append(
+            TypoGenerater.generate(token, error_type="random", error_rate=error_rate)
+        )
+
+        prev_ime_type = ime_type
+    return ("".join(tokens), tokens, ime_list)
 
 
 if __name__ == "__main__":
     # Test Parameters
-    TEST_CASES_NUMBER = 100
-    TEST_ERROR_RATE = 0
-    NUM_OF_TOKENS = [6, 5, 4, 3, 2, 1]
-    IME_CHANGE_MODE = False
-    NUM_OF_MIX_IME = 3
+    TEST_CASES_NUMBER = 1000
+    TEST_ERROR_RATES = [0, 0.1, 0.05]
+    NUM_OF_TOKENS = [7, 6, 5, 4]
+    MIX_IMES = [PINYIN_IME, ENGLISH_IME]
+    ONE_TIME_CHANGE_MODE = True
+
     # Settings
     # No settings
 
-    for NUM_OF_TOKEN in NUM_OF_TOKENS:
-        if IME_CHANGE_MODE and NUM_OF_MIX_IME > NUM_OF_TOKEN:
-            raise ValueError("In IME change mode, NUM_OF_MIX_IME should be less than or equal to NUM_OF_TOKEN")
-
-        error_rate_str = error_rate_to_string(TEST_ERROR_RATE)
-        TEST_RESULT_JSON_PATH = f"reports\\phase1_reconstruct_IME-CMode-{IME_CHANGE_MODE}_n{NUM_OF_TOKEN}-imes_{error_rate_str}_test_result_{TIMESTAMP}.json"
-
-        BOPOMOFO_TOKEN_TEST_DATA_PATH = (
-            f"Datasets\\Test_Datasets\\labeled_wlen1_bopomofo_{error_rate_str}_test.txt"
-        )
-        CANGJIE_TOKEN_TEST_DATA_PATH = (
-            f"Datasets\\Test_Datasets\\labeled_wlen1_cangjie_{error_rate_str}_test.txt"
-        )
-        PINYIN_TOKEN_TEST_DATA_PATH = (
-            f"Datasets\\Test_Datasets\\labeled_wlen1_pinyin_{error_rate_str}_test.txt"
-        )
-        ENGLISH_TOKEN_TEST_DATA_PATH = (
-            f"Datasets\\Test_Datasets\\labeled_wlen1_english_{error_rate_str}_test.txt"
-        )
-
-        print("Loading Test Tokens")
-        max_token_numbers = TEST_CASES_NUMBER * NUM_OF_TOKEN * 10
-        bopomofo_tokens = load_tokens(
-            BOPOMOFO_TOKEN_TEST_DATA_PATH, max_size=max_token_numbers
-        )
-        cangjie_tokens = load_tokens(
-            CANGJIE_TOKEN_TEST_DATA_PATH, max_size=max_token_numbers
-        )
-        pinyin_tokens = load_tokens(PINYIN_TOKEN_TEST_DATA_PATH, max_size=max_token_numbers)
-        english_tokens = load_tokens(
-            ENGLISH_TOKEN_TEST_DATA_PATH, max_size=max_token_numbers
-        )
-
-        def generate_tokens(ime_list: list[str]) -> list[str]:
-            tokens = []
-            prev_ime_type = None
-            for ime_type in ime_list:
-                if prev_ime_type == ENGLISH_IME:
-                    tokens.append(" ")
-
-                if ime_type == BOPOMOFO_IME:
-                    tokens.append(random.choice(bopomofo_tokens))
-                elif ime_type == CANGJIE_IME:
-                    tokens.append(random.choice(cangjie_tokens))
-                elif ime_type == PINYIN_IME:
-                    tokens.append(random.choice(pinyin_tokens))
-                elif ime_type == ENGLISH_IME:
-                    tokens.append(random.choice(english_tokens))
-                prev_ime_type = ime_type
-            return tokens
-
-        print("Generating Test Data")
-        test_data = []
-        for _ in range(TEST_CASES_NUMBER):
-
-            if IME_CHANGE_MODE:  # Define number of IME change
-                sub_ime_types = random.sample(IMES, k=NUM_OF_MIX_IME)
-                random.shuffle(sub_ime_types)
-                duplicate = random.choices(
-                    sub_ime_types, k=(NUM_OF_TOKEN - len(sub_ime_types))
+    for test_error_rate in TEST_ERROR_RATES:
+        for num_of_token in NUM_OF_TOKENS:
+            if ONE_TIME_CHANGE_MODE and len(MIX_IMES) > num_of_token:
+                raise ValueError(
+                    f"Number of MIX_IME: {len(MIX_IMES)} should be less than or equal to NUM_OF_TOKEN: {num_of_token}"
                 )
 
-                ime_list = []
-                for ime_type in sub_ime_types:
-                    if ime_type in duplicate:
-                        ime_list.extend([ime_type, ime_type])
-                        duplicate.remove(ime_type)
-                    else:
-                        ime_list.append(ime_type)
-
-                print("------")
-                print(sub_ime_types)
-                print(duplicate)
-                assert len(ime_list) == NUM_OF_TOKEN
-
-                tokens = generate_tokens(ime_list)
-                test_x = "".join(tokens)
-                test_label = tokens
-                test_data.append((test_x, test_label, ime_list))
-            else:  # Count by number of token
-                ime_list = random.choices(IMES, k=NUM_OF_TOKEN)
-
-                tokens = generate_tokens(ime_list)
-                test_x = "".join(tokens)
-                test_label = tokens
-                test_data.append((test_x, test_label, ime_list))
-
-
-        test_key_event_handler = KeyEventHandler()
-        
-        # Making Batch jobs
-        batch_args = [(test_key_event_handler, *test_case) for test_case in test_data]
-
-        print("Testing Reconstruct")
-
-        with tqdm(total=len(test_data), desc=f"Testing IME Reconstruct") as pbar:
-            corrects = []
-            mrr_scores = []  # Mean Reciprocal Rank
-            wrong_logs = []
-            time_spends = []
+            ERROR_RATE_STR = error_rate_to_string(test_error_rate)
+            MIX_IME_STR = "-".join(MIX_IMES)
+            TEST_RESULT_JSON_PATH = f"reports\\phase1_reconstruct_test_oneTime-{ONE_TIME_CHANGE_MODE}_{MIX_IME_STR}_{num_of_token}-tokens_{ERROR_RATE_STR}_{TIMESTAMP}.json"
 
             test_key_event_handler = KeyEventHandler()
+            with tqdm(total=TEST_CASES_NUMBER, desc="Testing IME Reconstruct") as pbar:
+                corrects = []
+                mrr_scores = []  # Mean Reciprocal Rank
+                # wrong_logs = []
+                time_spends = []
+                infinite_counts = []
 
-            for test_x, y_label, ime_list in test_data:
+                for i in range(TEST_CASES_NUMBER):
 
+                    test_x, y_label, imes = generate_test_case(
+                        mix_imes=MIX_IMES,
+                        n_token=num_of_token,
+                        error_rate=test_error_rate,
+                        one_time_change=ONE_TIME_CHANGE_MODE,
+                    )
+                    start_time = datetime.now()
+                    y_pred = test_key_event_handler.new_reconstruct(test_x)
+                    time_spend = datetime.now() - start_time
 
-
-                start_time = datetime.now()
-                y_pred = test_key_event_handler.phase_1(test_x)
-                time_spend = datetime.now() - start_time
-                # print("y_pred", y_pred)
-                # print("y_label", y_label)
-                if y_label in y_pred:
-                    corrects.append(1)
-                    mrr_scores.append(1 / (y_pred.index(y_label) + 1))
-                else:
-                    corrects.append(0)
-                    mrr_scores.append(0)
-                    wrong_logs.append(
-                        {"Input": test_x, "Output": y_pred, "Correnct": y_label, "IME": ime_list}
+                    total_distance = (
+                        test_key_event_handler._calculate_sentence_distance(y_pred[0])
                     )
 
-                time_spends.append(time_spend.total_seconds())
-                pbar.update()
+                    if total_distance == float("inf"):
+                        infinite_counts.append(1)
+                    else:
+                        infinite_counts.append(0)
 
-        # corrects = [result["correct"] for result in results]
-        # mrr_scores = [result["mrr_scores"] for result in results]
-        # time_spends = [result["time_spend"] for result in results]
-        # wrong_logs = [result["wrong_logs"] for result in results]
+                    # print("test_x", test_x)
+                    # print("y_pred", y_pred)
+                    # print("y_label", y_label)
 
+                    if y_label in y_pred:
+                        corrects.append(1)
+                        mrr_scores.append(1 / (y_pred.index(y_label) + 1))
+                    else:
+                        corrects.append(0)
+                        mrr_scores.append(0)
+                        # wrong_logs.append(
+                        #     {
+                        #         "Input": test_x,
+                        #         "Output": y_pred,
+                        #         "Correnct": y_label,
+                        #         "IME": imes,
+                        #     }
+                        # )
 
-        # assert len(corrects) == len(mrr_scores) and len(mrr_scores) == len(time_spends)
+                    time_spends.append(time_spend.total_seconds())
+                    pbar.update()
 
-        with open(TEST_RESULT_JSON_PATH, "w") as f:
-            json.dump(
-                {
-                    "Mode": f"Reconstruct, ime_change_mode: {IME_CHANGE_MODE}, num_of_token: {NUM_OF_TOKEN}, num_of_mix_ime: {NUM_OF_MIX_IME}, error_rate: {TEST_ERROR_RATE}",
-                    "Total Test Cases": len(test_data),
-                    "Accuracy": sum(corrects) / len(corrects),
-                    "Avg.MRR": sum(mrr_scores) / len(mrr_scores),
-                    "Avg.TimeSpend": sum(time_spends) / len(time_spends),
-                    "MRR": mrr_scores,
-                    "WrongLog": wrong_logs,
-                },
-                f,
+            print(
+                "------------------------------------------------------------\n"
+                + f"Test Result IME Reconstruct: n{num_of_token}\n"
+                + f"Testing IME Reconstruct: n{num_of_token}\n"
+                + f"One Time Change Mode: {ONE_TIME_CHANGE_MODE}\n"
+                + f"Mix IME: {MIX_IMES}\n"
+                + f"Error Rate: {test_error_rate}\n"
+                + f"Total Test Cases: {len(corrects)}\n"
+                + f"ACC: {sum(corrects) / len(corrects)}\n"
+                + f"Time: {sum(time_spends) / len(time_spends)}\n"
+                + f"Mean Reciprocal Rank: {sum(mrr_scores) / len(mrr_scores)}\n"
             )
+            assert (
+                len(corrects) == TEST_CASES_NUMBER
+            ), f"Mismatch on length of {len(corrects)} and test case number {TEST_CASES_NUMBER}"
+            with open(TEST_RESULT_JSON_PATH, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "Mode": f"Reconstruct, one_time_change_mode: {ONE_TIME_CHANGE_MODE},"
+                        f"mix_ime: {MIX_IMES}, num_of_token: {num_of_token},  error_rate: {test_error_rate}",
+                        "Total Test Cases": len(corrects),
+                        "Accuracy": sum(corrects) / len(corrects),
+                        "Avg.MRR": sum(mrr_scores) / len(mrr_scores),
+                        "Avg.TimeSpend": sum(time_spends) / len(time_spends),
+                        "MRR": mrr_scores,
+                        "TimeSpend": time_spends,
+                        "Infinite Count": infinite_counts,
+                        "Total Infinite Count": sum(infinite_counts),
+                        "Infinite Rate": sum(infinite_counts) / len(infinite_counts),
+                        # "WrongLog": wrong_logs,
+                    },
+                    f,
+                )
