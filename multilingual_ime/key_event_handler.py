@@ -134,6 +134,10 @@ class KeyEventHandler:
                 result.append(token)
         return result
 
+    def set_activation_status(self, ime_type: str, status: bool) -> None:
+        self.muti_config.setIMEActivationStatus(ime_name=ime_type, status=status)
+        self.actived_imes = self.muti_config.ACTIVE_IME
+
     @property
     def token_pool(self) -> list[str]:
         return list(self._token_pool_set)
@@ -285,6 +289,10 @@ class KeyEventHandler:
                 return
 
     def slow_handle(self):
+        # Migration to v2
+        self._slow_handle_v2()
+        return
+    
         # Update the token pool
         start_time = time.time()
         self._update_token_pool()
@@ -449,7 +457,7 @@ class KeyEventHandler:
     ) -> list[str]:
 
         def solve_sentence_phrase_matching(
-            sentence_candidate: list[list[Candidate]], pre_word: str
+            sentence_candidate: list[list[Candidate]], pre_word: str = ""
         ):
             # TODO: Consider the context
             def recursive(best_sentence_tokens: list[list[Candidate]]) -> list[str]:
@@ -731,6 +739,9 @@ class KeyEventHandler:
 
                 return get_path(predcessor, end_id)
 
+        if not keystroke:
+            return []
+
         # Get all possible seps
         possible_seps = []
         for ime_type in self.actived_imes:
@@ -793,6 +804,7 @@ class KeyEventHandler:
 
         return possible_paths[:top_n]
 
+    @lru_cache_with_doc(maxsize=128)
     def get_token_distance(self, token: str) -> int:
         min_distance = float("inf")
 
@@ -804,7 +816,7 @@ class KeyEventHandler:
             min_distance = min(min_distance, method_distance)
         return min_distance
 
-    def phase1(self, keystroke: str) -> list[str]:
+    def old_phase1(self, keystroke: str) -> list[str]:
         self.unfreezed_keystrokes = keystroke
         self._update_token_pool()
         possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
@@ -813,10 +825,24 @@ class KeyEventHandler:
         possible_sentences = self._sort_possible_sentences(possible_sentences)
         return possible_sentences
 
+    def end_to_end(self, keystroke: str) -> list[str]:
+        token_sentences = self.new_reconstruct(keystroke)
+        if not token_sentences:
+            return []
+        return self._token_sentence_to_word_sentence(token_sentences[0])
+
+    def _slow_handle_v2(self):
+        token_sentences = self.new_reconstruct(self.unfreezed_keystrokes)
+        if not token_sentences:
+            return
+        self.unfreezed_token_sentence = token_sentences[0]
+        self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
+            self.unfreezed_token_sentence
+        )
 
 if __name__ == "__main__":
     handler = KeyEventHandler()
-    phase1_result = handler.phase1("zuekua jwjc yk6hqgdi factories")
+    phase1_result = handler.old_phase1("zuekua jwjc yk6hqgdi factories")
     new_result = handler.new_reconstruct("zuekua jwjc yk6hqgdi factories")
     print("---------------------")
     print("PHASE1", phase1_result)
