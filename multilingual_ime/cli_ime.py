@@ -4,45 +4,96 @@ from colorama import Fore, Style
 
 from multilingual_ime.key_event_handler import KeyEventHandler
 
-WITH_COLOR = True
-VERBOSE_MODE = False
 
-def get_composition_string_with_cusor(
-    total_composition_words: list[str],
-    freezed_index: int,
-    unfreezed_composition_words: list[int],
-    composition_index: int,
-) -> str:
-    total = []
-    for i, word in enumerate(total_composition_words):
-        if i < freezed_index:
-            total.append((Fore.BLUE if WITH_COLOR else "") + word + Style.RESET_ALL)
-        elif freezed_index <= i < freezed_index + len(unfreezed_composition_words):
-            total.append((Fore.YELLOW if WITH_COLOR else "") + word + Style.RESET_ALL)
-        else:
-            total.append((Fore.BLUE if WITH_COLOR else "") + word + Style.RESET_ALL)
-
-    total.insert(composition_index, Fore.GREEN + "|" + Style.RESET_ALL)
-    return "".join(total)
-
-
-def get_candidate_words_with_cursor(
-    candidate_word_list: list[str], selection_index: int
-) -> str:
-    output = "["
-    for i, word in enumerate(candidate_word_list):
-        if i == selection_index:
-            output += Fore.GREEN + word + Style.RESET_ALL + " "
-        else:
-            output += word + " "
-    output += "]"
-    return output
+def prompt_boolean_setting(question: str, default_value: bool) -> str:
+    while True:
+        value = input(
+            Fore.BLUE
+            + question
+            + "(default: "
+            + (Fore.GREEN + "yes" if default_value else Fore.RED + "no")
+            + Fore.BLUE
+            + ")(y/n) : "
+            + Style.RESET_ALL
+        )
+        if value == "":
+            return default_value
+        if value in ["y", "yes"]:
+            return True
+        if value in ["n", "no"]:
+            return False
+        print("Invalid value, please input again")
 
 
-class EventWrapper:
+DEFAULT_VERBOSE_MODE = False
+DEFAULT_COLOR_MODE = True
+DEFAULT_BOPOMOFO_MODE_ENABLED = True
+DEFAULT_ENGLISH_MODE_ENABLED = True
+DEFAULT_CANGJIE_MODE_ENABLED = False
+DEFAULT_PINYIN_MODE_ENABLED = False
+
+
+class CommandLineIME:
     def __init__(self):
+        # Print welcome message
+        print(
+            "-" * 50
+            + Fore.GREEN
+            + "\nWelcome to the multilingual IME!\n"
+            + Fore.BLUE
+            + "This is a command line interface (CLI) for the multilingual IME.\n"
+            + "You can use this IME to type in multiple languages.\n"
+            + "The supported languages are: English, Bopomofo, Cangjie, Pinyin.\n"
+            + "If find any bug (possible many XD), please report to us at <https://github.com/Zen-Transform/Multilingual-IME/issues>.\n"
+            + Fore.RED
+            + "Press ESC to exit\n"
+            + Style.RESET_ALL
+            + "-" * 50
+        )
+        # Request settings
+        self.skip_all_settings = prompt_boolean_setting(
+            "Do you want to skip all settings?", True
+        )
+        if not self.skip_all_settings:
+            self.verbose_mode = prompt_boolean_setting(
+                "Do you want to enable verbose mode?", DEFAULT_VERBOSE_MODE
+            )
+            self.color_mode = prompt_boolean_setting(
+                "Do you want to enable color mode?", DEFAULT_COLOR_MODE
+            )
+            self.bopomofo_mode_enabled = prompt_boolean_setting(
+                "Do you want to enable bopomofo mode?", DEFAULT_BOPOMOFO_MODE_ENABLED
+            )
+            self.english_mode_enabled = prompt_boolean_setting(
+                "Do you want to enable english mode?", DEFAULT_ENGLISH_MODE_ENABLED
+            )
+            self.cangjie_mode_enabled = prompt_boolean_setting(
+                "Do you want to enable cangjie mode?", DEFAULT_CANGJIE_MODE_ENABLED
+            )
+            self.pinyin_mode_enabled = prompt_boolean_setting(
+                "Do you want to enable pinyin mode?", DEFAULT_PINYIN_MODE_ENABLED
+            )
+        else:
+            self.verbose_mode = DEFAULT_VERBOSE_MODE
+            self.color_mode = DEFAULT_COLOR_MODE
+            self.bopomofo_mode_enabled = DEFAULT_BOPOMOFO_MODE_ENABLED
+            self.english_mode_enabled = DEFAULT_ENGLISH_MODE_ENABLED
+            self.cangjie_mode_enabled = DEFAULT_CANGJIE_MODE_ENABLED
+            self.pinyin_mode_enabled = DEFAULT_PINYIN_MODE_ENABLED
+
+        # Initialize
         start_time = time.time()
-        self.my_keyeventhandler = KeyEventHandler(verbose_mode=VERBOSE_MODE)
+        self.key_event_handler = KeyEventHandler(verbose_mode=self.verbose_mode)
+        self.key_event_handler.set_activation_status(
+            "bopomofo", self.bopomofo_mode_enabled
+        )
+        self.key_event_handler.set_activation_status(
+            "english", self.english_mode_enabled
+        )
+        self.key_event_handler.set_activation_status(
+            "cangjie", self.cangjie_mode_enabled
+        )
+        self.key_event_handler.set_activation_status("pinyin", self.pinyin_mode_enabled)
         print("Initialization time: ", time.time() - start_time)
         self._run_timer = None
         self.time_spend = 0
@@ -51,14 +102,15 @@ class EventWrapper:
 
     def update_ui(self):
         print(
-            f"{get_composition_string_with_cusor(self.my_keyeventhandler.total_composition_words, self.my_keyeventhandler.freezed_index, self.my_keyeventhandler.unfreezed_composition_words, self.my_keyeventhandler.composition_index)}"
-            + f"\t\t {self.my_keyeventhandler.composition_index}"
-            + f"\t\t{get_candidate_words_with_cursor(self.my_keyeventhandler.candidate_word_list, self.my_keyeventhandler.selection_index) if self.my_keyeventhandler.in_selection_mode else ''}"
-            + f"\t\t{self.my_keyeventhandler.selection_index if self.my_keyeventhandler.in_selection_mode else ''}"
-            + f"\t\tTime spend: {self.time_spend}"
-            + f"\t\tAvg time spend: {self.avg_time_spend}"
+            "{:<}\t\t\t{: <5}{: <20}\t{: <5}\t{: <10}\t{: <10}".format(
+                self.composition_with_cusor_string,
+                self.key_event_handler.composition_index,
+                self.candidate_words_with_cursor_string,
+                self.selection_index_string,
+                f"Time spend: {self.time_spend:.3f}",
+                f"Avg time spend: {self.avg_time_spend:.3f}",
+            ),
         )
-
 
     def on_key_event(self, event):
         if event.event_type == keyboard.KEY_DOWN:
@@ -66,18 +118,20 @@ class EventWrapper:
             start_time = time.time()
 
             if event.name in ["enter", "left", "right", "down", "up", "esc"]:
-                self.my_keyeventhandler.handle_key(event.name)
+                self.key_event_handler.handle_key(event.name)
             else:
                 if keyboard.is_pressed("ctrl") and event.name != "ctrl":
-                    self.my_keyeventhandler.handle_key("©" + event.name)
+                    self.key_event_handler.handle_key("©" + event.name)
                 elif keyboard.is_pressed("shift") and event.name != "shift":
-                    self.my_keyeventhandler.handle_key(event.name.upper())
+                    self.key_event_handler.handle_key(event.name.upper())
                 else:
-                    self.my_keyeventhandler.handle_key(event.name)
+                    self.key_event_handler.handle_key(event.name)
 
-            self.my_keyeventhandler.slow_handle()
+            self.key_event_handler.slow_handle()
             self.time_spend = time.time() - start_time
-            self.avg_time_spend = (self.avg_time_spend * (self.key_count - 1) + self.time_spend) / (self.key_count)
+            self.avg_time_spend = (
+                self.avg_time_spend * (self.key_count - 1) + self.time_spend
+            ) / (self.key_count)
 
         self.update_ui()
 
@@ -85,7 +139,65 @@ class EventWrapper:
         keyboard.hook(self.on_key_event)
         keyboard.wait("esc")
 
+    @property
+    def composition_with_cusor_string(self):
+        total_string = []
+        total_composition_words = self.key_event_handler.total_composition_words
+        freezed_index = self.key_event_handler.freezed_index
+        unfreezed_composition_words = self.key_event_handler.unfreezed_composition_words
+        composition_index = self.key_event_handler.composition_index
+
+        for i, word in enumerate(total_composition_words):
+            if i < freezed_index:
+                total_string.append(
+                    (Fore.BLUE if self.color_mode else "") + word + Style.RESET_ALL
+                )
+            elif freezed_index <= i < freezed_index + len(unfreezed_composition_words):
+                total_string.append(
+                    (Fore.YELLOW if self.color_mode else "") + word + Style.RESET_ALL
+                )
+            else:
+                total_string.append(
+                    (Fore.BLUE if self.color_mode else "") + word + Style.RESET_ALL
+                )
+
+        total_string.insert(composition_index, Fore.GREEN + "|" + Style.RESET_ALL)
+        return "".join(total_string)
+
+    @property
+    def candidate_words_with_cursor_string(self):
+        if not self.key_event_handler.in_selection_mode:
+            return ""
+
+        candidate_word_list = self.key_event_handler.candidate_word_list
+        selection_index = self.key_event_handler.selection_index
+
+        output = "["
+        for i, word in enumerate(candidate_word_list):
+            if i == selection_index:
+                output += Fore.GREEN + word + Style.RESET_ALL + " "
+            else:
+                output += word + " "
+        output += "]"
+        return output
+
+    @property
+    def selection_index_string(self):
+        return (
+            Fore.GREEN + str(self.key_event_handler.selection_index) + Style.RESET_ALL
+            if self.key_event_handler.in_selection_mode
+            else ""
+        )
+
+    @property
+    def compsition_index_string(self):
+        return (
+            Fore.GREEN + str(self.key_event_handler.composition_index) + Style.RESET_ALL
+            if self.key_event_handler.in_selection_mode
+            else ""
+        )
+
 
 if __name__ == "__main__":
-    event_wrapper = EventWrapper()
+    event_wrapper = CommandLineIME()
     event_wrapper.run()
