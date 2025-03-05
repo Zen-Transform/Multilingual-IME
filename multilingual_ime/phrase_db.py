@@ -39,7 +39,7 @@ class PhraseDataBase:
     def getphrase(self, phrase: str) -> list[tuple[str, int]]:
         with self._lock:
             self._cursor.execute(
-                f"SELECT phrase FROM phrase_table WHERE phrase = '{phrase}'"
+                "SELECT phrase FROM phrase_table WHERE phrase = ?", (phrase,)
             )
             return [row[0] for row in self._cursor.fetchall()]
 
@@ -48,7 +48,7 @@ class PhraseDataBase:
             return []
         with self._lock:
             self._cursor.execute(
-                f"SELECT initial_word, phrase, frequency FROM phrase_table WHERE initial_word = '{prefix}'"
+                "SELECT initial_word, phrase, frequency FROM phrase_table WHERE initial_word = ?", (prefix,)
             )
             return [
                 (phrase, frequency)
@@ -59,7 +59,7 @@ class PhraseDataBase:
         if not self.getphrase(phrase):
             with self._lock:
                 self._cursor.execute(
-                    f"INSERT INTO phrase_table (phrase, frequency) VALUES ('{phrase}', {frequency})"
+                    "INSERT INTO phrase_table (phrase, frequency) VALUES (?, ?))", (phrase, frequency)
                 )
                 self._conn.commit()
 
@@ -69,19 +69,19 @@ class PhraseDataBase:
 
         with self._lock:
             self._cursor.execute(
-                f"UPDATE phrase_table SET frequency = {frequency} WHERE phrase = '{phrase}'"
+                "UPDATE phrase_table SET frequency = ? WHERE phrase = ?", (frequency, phrase)
             )
             self._conn.commit()
 
     def delete(self, phrase: str) -> None:
         with self._lock:
-            self._cursor.execute(f"DELETE FROM phrase_table WHERE phrase = '{phrase}'")
+            self._cursor.execute("DELETE FROM phrase_table WHERE phrase = ?", (phrase,))
             self._conn.commit()
 
     def increment_frequency(self, phrase: str) -> None:
         with self._lock:
             self._cursor.execute(
-                f"UPDATE phrase_table SET frequency = frequency + 1 WHERE phrase = '{phrase}'"
+                "UPDATE phrase_table SET frequency = frequency + 1 WHERE phrase = ?", (phrase,)
             )
             self._conn.commit()
 
