@@ -37,9 +37,12 @@ def get_chinese_word(n: int) -> list[str]:
     CHINESE_PLAIN_TEXT_FILE_PATH = (
         ".\\Datasets\\Plain_Text_Datasets\\Chinese_WebCrawlData_cc100-ch.txt"
     )
-    line = get_random_line_efficient(CHINESE_PLAIN_TEXT_FILE_PATH)
-    jieba_words = jieba.lcut(line)
-    jieba_words = [word for word in jieba_words if len(word) <= n]
+    jieba_words = []
+    while len(jieba_words) <= 0:
+        line = get_random_line_efficient(CHINESE_PLAIN_TEXT_FILE_PATH)
+        jieba_words = jieba.lcut(line)
+        jieba_words = [word for word in jieba_words if len(word) <= n]
+    assert len(jieba_words) > 0, f"Got empty line from {CHINESE_PLAIN_TEXT_FILE_PATH}"
 
     words = ""
     while True:
@@ -50,9 +53,11 @@ def get_chinese_word(n: int) -> list[str]:
         elif len(words + new_word) < n:
             words += new_word
         else:
-            continue
+            words += new_word[: n - len(words)]
+            break
 
-    return [word for word in words]
+    assert len(words) == n
+    return list(words)
 
 
 def get_english_word(n: int) -> list[str]:
@@ -120,6 +125,15 @@ def generate_test_case(
     return ("".join(tokens), new_words, ime_list)
 
 
+def list_to_safe_string(l: list[str]) -> str:
+    total_string = '"['
+    for i, item in enumerate(l):
+        if isinstance(item, str):
+            total_string += "'" + item.replace("'", "\\'").replace('"', '\\"')
+            total_string += "'," if i < len(l)-1 else "'"
+    total_string += ']"'
+    return total_string
+
 random.seed(32)
 TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
@@ -127,9 +141,9 @@ TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H-%M")
 if __name__ == "__main__":
     # Test Parameters
     TEST_CASE_NUMBER = 1000
-    MIX_IMES = [BOPOMOFO_IME, ENGLISH_IME]
-    TEST_ERROR_RATES = [0, 0.1, 0.05]
-    NUM_OF_TOKENS = [7, 6, 5, 4, 3, 2]
+    MIX_IMES = [PINYIN_IME, ENGLISH_IME]
+    TEST_ERROR_RATES = [0.1, 0.05]
+    NUM_OF_TOKENS = [7, 6, 5, 4]
     ONE_TIME_CHANGE_MODE = True
 
     test_ime_handler = KeyEventHandler()
@@ -153,7 +167,7 @@ if __name__ == "__main__":
             TEST_RESULT_CSV_PATH = f"reports\\end2end_test_oneTime-{ONE_TIME_CHANGE_MODE}_{MIX_IME_STR}_{num_of_token}-tokens_{ERROR_RATE_STR}_{TIMESTAMP}.csv"
             with open(TEST_RESULT_CSV_PATH, "a", encoding="utf-8") as f:
                 f.write(
-                    "correct,BLUE_score,unigram,bigram,trigrams,time_spend,x_test_str,y_pred_sentence,y_label_tokens,y_pred_tokens\n"
+                    "correct,BLEUn4,BLEUn3,BLEUn2,BLEUn1,unigram,bigrams,trigrams,fourgrams,time_spend,x_test_str,y_pred_sentence,y_label_tokens,y_pred_tokens\n"
                 )
             method1_smoothing_function = SmoothingFunction().method1
 
@@ -173,9 +187,27 @@ if __name__ == "__main__":
                 y_pred_sentence = "".join(y_pred_tokens)
                 time_spend = (datetime.now() - start_time).total_seconds()
                 correct = True if y_pred_sentence == "".join(y_label_tokens) else False
-                BLUE_score = sentence_bleu(
+                BLEUn4 = sentence_bleu(
                     [y_label_tokens],
                     y_pred_tokens,
+                    smoothing_function=method1_smoothing_function,
+                )
+                BLEUn3 = sentence_bleu(
+                    [y_label_tokens],
+                    y_pred_tokens,
+                    weights=(1, 1, 1, 0),
+                    smoothing_function=method1_smoothing_function,
+                )
+                BLEUn2 = sentence_bleu(
+                    [y_label_tokens],
+                    y_pred_tokens,
+                    weights=(1, 1, 0, 0),
+                    smoothing_function=method1_smoothing_function,
+                )
+                BLEUn1 = sentence_bleu(
+                    [y_label_tokens],
+                    y_pred_tokens,
+                    weights=(1, 0, 0, 0),
                     smoothing_function=method1_smoothing_function,
                 )
                 unigram = sentence_bleu(
@@ -196,8 +228,13 @@ if __name__ == "__main__":
                     weights=(0, 0, 1, 0),
                     smoothing_function=method1_smoothing_function,
                 )
-
+                fourgrams = sentence_bleu(
+                    [y_label_tokens],
+                    y_pred_tokens,
+                    weights=(0, 0, 0, 1),
+                    smoothing_function=method1_smoothing_function,
+                )
                 with open(TEST_RESULT_CSV_PATH, "a", encoding="utf-8") as f:
                     f.write(
-                        f"{correct},{BLUE_score},{unigram},{bigrams},{trigrams},{time_spend},{x_test_str},{y_pred_sentence},{y_label_tokens},{y_pred_tokens}\n"
+                        f'{correct},{BLEUn4},{BLEUn3},{BLEUn2},{BLEUn1},{unigram},{bigrams},{trigrams},{fourgrams},{time_spend},"{x_test_str}","{y_pred_sentence}",{list_to_safe_string(y_label_tokens)},{list_to_safe_string(y_pred_tokens)}\n'
                     )
