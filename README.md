@@ -27,14 +27,14 @@ Current supported input methods
 ## Install
 
 ```shell
-> pip install multlingual_ime
+> pip install multilingual_ime
 ```
 
 ### Run Example
 
 ```shell
 # Install package
-> pip install multlingual_ime
+> pip install multilingual_ime
 # Run cli version of input method
 > python -m multilingual_ime.ime_cli
 ```
