@@ -144,7 +144,31 @@ class KeystrokeMappingDB:
                 return frequency[0]
             else:
                 return 0
+        
+    def update_word_frequency(self, keystroke: str, word: str, frequency: int):
+        # with self._lock:
+            self._cursor.execute(
+                "UPDATE keystroke_map SET frequency = ? WHERE keystroke = ? AND word = ?",
+                (frequency, keystroke, word),
+            )
+            self._conn.commit()
 
+    def get_word_keystroke(self, word: str) -> str:
+        with self._lock:
+            self._cursor.execute(
+                "SELECT keystroke FROM keystroke_map WHERE word = ?", (word,)
+            )
+            if result := self._cursor.fetchone():
+                return result[0]
+            return None
+
+    def to_csv(self, file_path: str):
+        with self._lock:
+            self._cursor.execute("SELECT keystroke, word, frequency FROM keystroke_map")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("keystroke,word,frequency\n")
+                for row in self._cursor.fetchall():
+                    f.write(f'"{row[0]}","{row[1]}",{int(row[2])}\n')
 
 if __name__ == "__main__":
     import pathlib
