@@ -3,8 +3,6 @@ import logging
 import heapq
 from pathlib import Path
 
-import jieba
-
 from .candidate import Candidate
 from .keystroke_map_db import KeystrokeMappingDB
 from .core.custom_decorators import lru_cache_with_doc, deprecated
@@ -647,22 +645,7 @@ class KeyEventHandler:
                     self._user_frequency_db.increment_word_frequency(word)
 
     def update_user_phrase_db(self, text: str) -> None:
-        """
-        Update the user phrase database with the given phrase and frequency.
-
-        Args:
-            phrase (str): The phrase to update
-            frequency (int): The frequency of the phrase
-        """
-
-        for phrase in jieba.lcut(text, cut_all=False):
-            if len(phrase) < 2:
-                continue
-
-            if not self._user_phrase_db.getphrase(phrase):
-                self._user_phrase_db.insert(phrase, 1)
-            else:
-                self._user_phrase_db.increment_frequency(phrase)
+        raise NotImplementedError("update_user_phrase_db is not implemented yet")
 
     def new_reconstruct(self, keystroke: str, top_n: int = 10) -> list[list[str]]:
         class SentenceGraph:
