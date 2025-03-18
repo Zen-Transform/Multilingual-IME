@@ -144,7 +144,7 @@ class CommandLineIME:
         total_string = []
         total_composition_words = self.key_event_handler.total_composition_words
         freezed_index = self.key_event_handler.freezed_index
-        unfreezed_composition_words = self.key_event_handler.unfreezed_composition_words
+        unfreezed_composition_words = self.key_event_handler.unfreeze_composition_words
         composition_index = self.key_event_handler.composition_index
 
         for i, word in enumerate(total_composition_words):

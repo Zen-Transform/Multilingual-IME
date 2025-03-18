@@ -1,15 +1,13 @@
-import time
 import logging
 import heapq
 from pathlib import Path
 
 from .candidate import Candidate
 from .keystroke_map_db import KeystrokeMappingDB
-from .core.custom_decorators import lru_cache_with_doc, deprecated
+from .core.custom_decorators import lru_cache_with_doc
 from .core.F import (
     modified_levenshtein_distance,
     is_chinese_character,
-    is_all_chinese_char,
 )
 from .ime import (
     IMEFactory,
@@ -51,21 +49,21 @@ class KeyEventHandler:
         self.logger.addHandler(logging.StreamHandler())
 
         # Setup Config
-        self.muti_config = MultiConfig()
+        self._config = MultiConfig()
         self._chinese_phrase_db = PhraseDataBase(CHINESE_PHRASE_DB_PATH)
         self._user_phrase_db = PhraseDataBase(USER_PHRASE_DB_PATH)
         self._user_frequency_db = KeystrokeMappingDB(USER_FREQUENCY_DB_PATH)
 
         # Setup IMEs
-        self.actived_imes: list[str] = self.muti_config.ACTIVE_IME
+        self.activated_imes: list[str] = self._config.ACTIVE_IME
         self.ime_handlers = {
-            ime: IMEFactory.create_ime(ime) for ime in self.actived_imes
+            ime: IMEFactory.create_ime(ime) for ime in self.activated_imes
         }
 
         # Config Settings
-        self.AUTO_PHRASE_LEARN = self.muti_config.AUTO_PHRASE_LEARN
-        self.AUTO_FREQUENCY_LEARN = self.muti_config.AUTO_FREQUENCY_LEARN
-        self.SELECTION_PAGE_SIZE = self.muti_config.SELECTION_PAGE_SIZE
+        self.auto_phrase_learn = self._config.AUTO_PHRASE_LEARN
+        self.auto_frequency_learn = self._config.AUTO_FREQUENCY_LEARN
+        self.selection_page_size = self._config.SELECTION_PAGE_SIZE
 
         # State Variables
         self._token_pool_set = set()
@@ -76,9 +74,9 @@ class KeyEventHandler:
         self.freezed_token_sentence = []
         self.freezed_composition_words = []
 
-        self.unfreezed_keystrokes = ""
-        self.unfreezed_token_sentence = []
-        self.unfreezed_composition_words = []
+        self.unfreeze_keystrokes = ""
+        self.unfreeze_token_sentence = []
+        self.unfreeze_composition_words = []
 
         # Selection States
         self.in_selection_mode = False
@@ -94,9 +92,9 @@ class KeyEventHandler:
         self.freezed_token_sentence = []
         self.freezed_composition_words = []
 
-        self.unfreezed_keystrokes = ""
-        self.unfreezed_token_sentence = []
-        self.unfreezed_composition_words = []
+        self.unfreeze_keystrokes = ""
+        self.unfreeze_token_sentence = []
+        self.unfreeze_composition_words = []
 
         self._reset_selection_states()
 
@@ -115,12 +113,12 @@ class KeyEventHandler:
             self.total_composition_words
         )
         self.freezed_index = self.freezed_index + len(
-            self.separate_english_token(self.unfreezed_composition_words)
+            self.separate_english_token(self.unfreeze_composition_words)
         )
 
-        self.unfreezed_keystrokes = ""
-        self.unfreezed_token_sentence = []
-        self.unfreezed_composition_words = []
+        self.unfreeze_keystrokes = ""
+        self.unfreeze_token_sentence = []
+        self.unfreeze_composition_words = []
 
     def separate_english_token(self, tokens: list[str]) -> list[str]:
         #  Special case for English, separate the english word by character
@@ -133,8 +131,8 @@ class KeyEventHandler:
         return result
 
     def set_activation_status(self, ime_type: str, status: bool) -> None:
-        self.muti_config.setIMEActivationStatus(ime_name=ime_type, status=status)
-        self.actived_imes = self.muti_config.ACTIVE_IME
+        self._config.setIMEActivationStatus(ime_name=ime_type, status=status)
+        self.activated_imes = self._config.ACTIVE_IME
 
     @property
     def token_pool(self) -> list[str]:
@@ -144,7 +142,7 @@ class KeyEventHandler:
     def total_composition_words(self) -> list[str]:
         return (
             self.freezed_composition_words[: self.freezed_index]
-            + self.unfreezed_composition_words
+            + self.unfreeze_composition_words
             + self.freezed_composition_words[self.freezed_index :]
         )
 
@@ -152,17 +150,17 @@ class KeyEventHandler:
     def total_token_sentence(self) -> list[str]:
         return (
             self.freezed_token_sentence[: self.freezed_index]
-            + self.unfreezed_token_sentence
+            + self.unfreeze_token_sentence
             + self.freezed_token_sentence[self.freezed_index :]
         )
 
     @property
     def composition_index(self) -> int:
-        return self.freezed_index + self.unfreezed_index
+        return self.freezed_index + self.unfreeze_index
 
     @property
-    def unfreezed_index(self) -> int:
-        return len(self.unfreezed_composition_words)
+    def unfreeze_index(self) -> int:
+        return len(self.unfreeze_composition_words)
 
     @property
     def candidate_word_list(self) -> list[str]:
@@ -170,14 +168,14 @@ class KeyEventHandler:
         The candidate word list for the current token in selection mode.
         Show only the current page of the candidate word list.
         """
-        page = self._total_selection_index // self.SELECTION_PAGE_SIZE
+        page = self._total_selection_index // self.selection_page_size
         return self._total_candidate_word_list[
-            page * self.SELECTION_PAGE_SIZE : (page + 1) * self.SELECTION_PAGE_SIZE
+            page * self.selection_page_size : (page + 1) * self.selection_page_size
         ]
 
     @property
     def selection_index(self) -> int:
-        return self._total_selection_index % self.SELECTION_PAGE_SIZE
+        return self._total_selection_index % self.selection_page_size
 
     @property
     def composition_string(self) -> str:
@@ -206,7 +204,7 @@ class KeyEventHandler:
                     self.freezed_composition_words[self.composition_index - 1] = (
                         selected_word
                     )
-                    # ! Recaculate the index
+                    # ! Recalculate the index
                     self.freezed_index = self.freezed_index + len(selected_word) - 1
                     self._reset_selection_states()
                 elif key == "left":  # Open side selection ?
@@ -224,9 +222,9 @@ class KeyEventHandler:
                     key == "enter"
                 ):  # Conmmit the composition string, update the db & reset all states
                     self._unfreeze_to_freeze()
-                    if self.AUTO_PHRASE_LEARN:
+                    if self.auto_phrase_learn:
                         self.update_user_phrase_db(self.composition_string)
-                    if self.AUTO_FREQUENCY_LEARN:
+                    if self.auto_frequency_learn:
                         self.update_user_frequency_db()
                     self._reset_all_states()
                 elif key == "left":
@@ -260,11 +258,11 @@ class KeyEventHandler:
                 return
         else:
             if key == "backspace":
-                if self.unfreezed_index > 0:
-                    self.unfreezed_keystrokes = self.unfreezed_keystrokes[:-1]
-                    self.unfreezed_composition_words = self.unfreezed_composition_words[
+                if self.unfreeze_index > 0:
+                    self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1]
+                    self.unfreeze_composition_words = self.unfreeze_composition_words[
                         :-1
-                    ] + [self.unfreezed_token_sentence[-1][:-1]]
+                    ] + [self.unfreeze_token_sentence[-1][:-1]]
                 else:
                     if self.freezed_index > 0:
                         self.freezed_composition_words = (
@@ -274,74 +272,38 @@ class KeyEventHandler:
                         self.freezed_index -= 1
                         return
             elif key == "space":
-                self.unfreezed_keystrokes += " "
-                self.unfreezed_composition_words += [" "]
+                self.unfreeze_keystrokes += " "
+                self.unfreeze_composition_words += [" "]
             elif key in TOTAL_VALID_KEYSTROKE_SET:
-                self.unfreezed_keystrokes += key
-                self.unfreezed_composition_words += [key]
+                self.unfreeze_keystrokes += key
+                self.unfreeze_composition_words += [key]
             elif key.startswith("©"):
-                self.unfreezed_keystrokes += key
-                self.unfreezed_composition_words += [key[1:]]
+                self.unfreeze_keystrokes += key
+                self.unfreeze_composition_words += [key[1:]]
             else:
                 print(f"Invalid key: {key}")
                 return
 
     def slow_handle(self):
-        # Migration to v2
-        self._slow_handle_v2()
-        return
-    
-        # Update the token pool
-        start_time = time.time()
-        self._update_token_pool()
-        self.logger.info(f"Updated token pool: {time.time() - start_time}")
-        self.logger.info(f"Token pool: {self.token_pool}")
-
-        # Reconstruct the sentence
-        start_time = time.time()
-        possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
-            self.unfreezed_keystrokes
-        )
-        self.logger.info(f"Reconstructed sentence: {time.time() - start_time}")
-        self.logger.info(f"Reconstructed sentences: {possible_sentences}")
-
-        if possible_sentences == []:
-            self.logger.info("No possible sentences found")
+        # This is the V2 of the handle_key function, using the new_reconstruct function
+        token_sentences = self.new_reconstruct(self.unfreeze_keystrokes)
+        if not token_sentences:
             return
-
-        # Calculate the distance of the possible sentences
-        start_time = time.time()
-        possible_sentences = self._sort_possible_sentences(possible_sentences)
-        best_sentences = possible_sentences[0]
-        self._pre_possible_sentences = possible_sentences[
-            :MAX_SAVE_PRE_POSSIBLE_SENTENCES
-        ]
-        self.unfreezed_token_sentence = best_sentences
-        self.logger.info(f"Filtered sentence: {time.time() - start_time}")
-        self.logger.info(f"Best sentences: {best_sentences}")
-        self.logger.info(f"Pre possible sentences: {self._pre_possible_sentences}")
-
-        start_time = time.time()
-        self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
-            best_sentences
+        self.unfreeze_token_sentence = token_sentences[0]
+        self.unfreeze_composition_words = self._token_sentence_to_word_sentence(
+            self.unfreeze_token_sentence
         )
-        self.logger.info(f"Token to word sentence: {time.time() - start_time}")
-        self.logger.info(f"Token to word sentences: {self.unfreezed_composition_words}")
-
-        return
 
     def _update_token_pool(self) -> None:
-        for ime_type in self.actived_imes:
-            token_ways = self.ime_handlers[ime_type].tokenize(self.unfreezed_keystrokes)
+        for ime_type in self.activated_imes:
+            token_ways = self.ime_handlers[ime_type].tokenize(self.unfreeze_keystrokes)
             for ways in token_ways:
                 for token in ways:
                     self._token_pool_set.add(token)
 
         # Cut large token to small token
         # TODO: This is a hack, need to find a better way to handle this
-        sorted_tokens = sorted(
-            list(self._token_pool_set), key=lambda x: len(x), reverse=True
-        )
+        sorted_tokens = sorted(list(self._token_pool_set), key=len, reverse=True)
         for token in sorted_tokens:
             if len(token) > 1:
                 for i in range(1, len(token)):
@@ -352,10 +314,25 @@ class KeyEventHandler:
         return token in self._token_pool_set
 
     @lru_cache_with_doc(maxsize=128)
-    def get_token_distance(self, request_token: str) -> int:
-        return self._closest_word_distance(request_token)
+    def get_token_distance(self, token: str) -> int:
+        """
+        Get the distance of the given token to its closest word from all IMEs
 
-    # @lru_cache_with_doc(maxsize=128)
+        Args:
+            token (str): The token to search for
+        Returns:
+            int: The distance to the closest word
+        """
+        min_distance = float("inf")
+
+        for ime_type in self.activated_imes:
+            if not self.ime_handlers[ime_type].is_valid_token(token):
+                continue
+
+            method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
+            min_distance = min(min_distance, method_distance)
+        return min_distance
+
     def token_to_candidates(self, token: str) -> list[Candidate]:
         """
         Get the possible candidates of the token from all IMEs.
@@ -367,7 +344,7 @@ class KeyEventHandler:
         """
         candidates = []
 
-        for ime_type in self.actived_imes:
+        for ime_type in self.activated_imes:
             if self.ime_handlers[ime_type].is_valid_token(token):
                 result = self.ime_handlers[ime_type].get_token_candidates(token)
                 candidates.extend(
@@ -385,7 +362,7 @@ class KeyEventHandler:
                 )
 
         if len(candidates) == 0:
-            self.logger.info(f"No candidates found for token '{token}'")
+            self.logger.info("No candidates found for token '%s'", token)
             return [Candidate(token, token, 0, token, 0, "NO_IME")]
 
         candidates = sorted(
@@ -395,7 +372,7 @@ class KeyEventHandler:
             candidates, key=lambda x: x.word_frequency, reverse=True
         )  # Then sort by frequency
 
-        # FIXME: This is a hack to increase the rank of the token if it is in the user frequency db
+        # This is a hack to increase the rank of the token if it is in the user frequency db
         new_candidates = []
         for candidate in candidates:
             if self._user_frequency_db.word_exists(candidate.word):
@@ -430,10 +407,10 @@ class KeyEventHandler:
     ) -> list[list[str]]:
         # Sort the possible sentences by the distance
         possible_sentences_with_distance = [
-            dict(
-                sentence=sentence,
-                distance=self._calculate_sentence_distance(sentence),
-            )
+            {
+                "sentence": sentence,
+                "distance": self._calculate_sentence_distance(sentence)
+            }
             for sentence in possible_sentences
         ]
         possible_sentences_with_distance = sorted(
@@ -451,7 +428,7 @@ class KeyEventHandler:
         return [r["sentence"] for r in possible_sentences]
 
     def _token_sentence_to_word_sentence(
-        self, token_sentence: list[str], context: str = ""
+        self, token_sentence: list[str], context: str = "", naive_first: bool = False
     ) -> list[str]:
 
         def solve_sentence_phrase_matching(
@@ -477,9 +454,7 @@ class KeyEventHandler:
                     for phrase in related_phrases
                     if len(phrase) <= len(best_sentence_tokens)
                 ]
-                related_phrases = sorted(
-                    related_phrases, key=lambda x: len(x), reverse=True
-                )
+                related_phrases = sorted(related_phrases, key=len, reverse=True)
 
                 for phrase in related_phrases:
                     correct_phrase = True
@@ -510,9 +485,11 @@ class KeyEventHandler:
             self.token_to_candidates(token) for token in token_sentence
         ]
 
+        if naive_first:
+            return solve_sentence_naive_first(sentence_candidates)
+
         pre_word = context[-1] if context else ""
         result = solve_sentence_phrase_matching(sentence_candidates, pre_word)
-        # result = solve_sentence_naive_first(sentence_candidates)
         return result
 
     def _reconstruct_sentence_from_pre_possible_sentences(
@@ -610,31 +587,7 @@ class KeyEventHandler:
         Returns:
             int: The distance of the sentence
         """
-
         return sum([self.get_token_distance(token) for token in sentence])
-
-    @lru_cache_with_doc(maxsize=128)
-    def _closest_word_distance(self, token: str) -> int:
-        """
-        Get the word distance to the closest word from all IMEs.
-
-        Args:
-            token (str): The token to search for
-        Returns:
-            int: The distance to the closest word
-        """
-        min_distance = float("inf")
-
-        if not self._is_token_in_pool(token):
-            return min_distance
-
-        for ime_type in self.actived_imes:
-            if not self.ime_handlers[ime_type].is_valid_token(token):
-                continue
-
-            method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
-            min_distance = min(min_distance, method_distance)
-        return min_distance
 
     def update_user_frequency_db(self) -> None:
         for word in self.total_composition_words:
@@ -673,13 +626,13 @@ class KeyEventHandler:
 
             def find_shortest_paths(self, start_id: str, end_id: str) -> list[str]:
                 # By Dijkstra
-                predcessor = {id: None for id in self._graph}
+                predecessor = {id: None for id in self._graph}
                 distance = {id: None for id in self._graph}
                 distance[start_id] = 0
 
-                priorty_queue = [(0, start_id)]
-                while priorty_queue:
-                    current_distance, current_id = heapq.heappop(priorty_queue)
+                priority_queue = [(0, start_id)]
+                while priority_queue:
+                    current_distance, current_id = heapq.heappop(priority_queue)
 
                     for neighbor_id, neighbor_weight in self._graph[current_id]:
                         neg_new_distance = current_distance + neighbor_weight
@@ -687,51 +640,51 @@ class KeyEventHandler:
                         if distance[neighbor_id] is None:
                             distance[neighbor_id] = neg_new_distance
                             heapq.heappush(
-                                priorty_queue, (neg_new_distance, neighbor_id)
+                                priority_queue, (neg_new_distance, neighbor_id)
                             )
-                            predcessor[neighbor_id] = set([current_id])
+                            predecessor[neighbor_id] = set([current_id])
                         else:
 
                             if neg_new_distance < distance[neighbor_id]:
                                 distance[neighbor_id] = neg_new_distance
                                 heapq.heappush(
-                                    priorty_queue, (neg_new_distance, neighbor_id)
+                                    priority_queue, (neg_new_distance, neighbor_id)
                                 )
-                                predcessor[neighbor_id] = set([current_id])
+                                predecessor[neighbor_id] = set([current_id])
                             elif neg_new_distance == distance[neighbor_id]:
-                                predcessor[neighbor_id].add(current_id)
+                                predecessor[neighbor_id].add(current_id)
 
                 # Get the path
                 def get_path(
-                    predcessor: dict[str, set], end_id: str
+                    predecessor: dict[str, set], end_id: str
                 ) -> list[list[str]]:
 
                     def dfs(current_id: str) -> list[list[str]]:
                         if current_id == start_id:
                             return [[start_id]]
 
-                        if predcessor[current_id] is None:
+                        if predecessor[current_id] is None:
                             return []
 
                         paths = []
-                        for pred in predcessor[current_id]:
+                        for pred in predecessor[current_id]:
                             paths.extend([path + [current_id] for path in dfs(pred)])
                         return paths
 
                     return dfs(end_id)
 
-                return get_path(predcessor, end_id)
+                return get_path(predecessor, end_id)
 
         if not keystroke:
             return []
 
         # Get all possible seps
         possible_seps = []
-        for ime_type in self.actived_imes:
+        for ime_type in self.activated_imes:
             token_ways = self.ime_handlers[ime_type].tokenize(keystroke)
             possible_seps.extend(token_ways)
 
-        # Filte out empty sep
+        # Filter out empty sep
         possible_seps = [sep for sep in possible_seps if sep]
         # Filter out same sep
         possible_seps = [list(t) for t in set(tuple(token) for token in possible_seps)]
@@ -753,7 +706,7 @@ class KeyEventHandler:
             new_possible_seps.append(new_sep)
         new_possible_seps.extend(possible_seps)
 
-        self.logger.info(f"Creating Graph with {len(new_possible_seps)} possible seps")
+        self.logger.info("Creating Graph with %d possible seps", len(new_possible_seps))
         id_maps = {}
         graph = SentenceGraph()
         for sep in new_possible_seps:
@@ -771,7 +724,7 @@ class KeyEventHandler:
             graph.add_edge(prev_token_id, "<end>", 0)
 
         shortest_paths = graph.find_shortest_paths("<start>", "<end>")
-        self.logger.info(f"Found {len(shortest_paths)} shortest paths")
+        self.logger.info("Found %d shortest paths", len(shortest_paths))
 
         possible_paths = []
         for path in shortest_paths:
@@ -783,27 +736,15 @@ class KeyEventHandler:
                 )
             )
             possible_paths.append([id_maps[id] for id in path])
-        possible_paths = sorted(possible_paths, key=lambda x: len(x), reverse=False)
+        possible_paths = sorted(possible_paths, key=len, reverse=False)
 
         return possible_paths[:top_n]
 
-    @lru_cache_with_doc(maxsize=128)
-    def get_token_distance(self, token: str) -> int:
-        min_distance = float("inf")
-
-        for ime_type in self.actived_imes:
-            if not self.ime_handlers[ime_type].is_valid_token(token):
-                continue
-
-            method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
-            min_distance = min(min_distance, method_distance)
-        return min_distance
-
     def old_phase1(self, keystroke: str) -> list[str]:
-        self.unfreezed_keystrokes = keystroke
+        self.unfreeze_keystrokes = keystroke
         self._update_token_pool()
         possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
-            self.unfreezed_keystrokes
+            self.unfreeze_keystrokes
         )
         possible_sentences = self._sort_possible_sentences(possible_sentences)
         return possible_sentences
@@ -814,14 +755,6 @@ class KeyEventHandler:
             return []
         return self._token_sentence_to_word_sentence(token_sentences[0])
 
-    def _slow_handle_v2(self):
-        token_sentences = self.new_reconstruct(self.unfreezed_keystrokes)
-        if not token_sentences:
-            return
-        self.unfreezed_token_sentence = token_sentences[0]
-        self.unfreezed_composition_words = self._token_sentence_to_word_sentence(
-            self.unfreezed_token_sentence
-        )
 
 if __name__ == "__main__":
     handler = KeyEventHandler()
