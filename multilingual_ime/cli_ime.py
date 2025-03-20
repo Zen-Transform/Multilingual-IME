@@ -31,6 +31,7 @@ DEFAULT_BOPOMOFO_MODE_ENABLED = True
 DEFAULT_ENGLISH_MODE_ENABLED = True
 DEFAULT_CANGJIE_MODE_ENABLED = False
 DEFAULT_PINYIN_MODE_ENABLED = False
+DEFAULT_JAPANESE_MODE_ENABLED = True
 
 
 class CommandLineIME:
@@ -73,6 +74,9 @@ class CommandLineIME:
             self.pinyin_mode_enabled = prompt_boolean_setting(
                 "Do you want to enable pinyin mode?", DEFAULT_PINYIN_MODE_ENABLED
             )
+            self.japanese_mode_enabled = prompt_boolean_setting(
+                "Do you want to enable japanese mode?", DEFAULT_JAPANESE_MODE_ENABLED
+            )
         else:
             self.verbose_mode = DEFAULT_VERBOSE_MODE
             self.color_mode = DEFAULT_COLOR_MODE
@@ -80,6 +84,7 @@ class CommandLineIME:
             self.english_mode_enabled = DEFAULT_ENGLISH_MODE_ENABLED
             self.cangjie_mode_enabled = DEFAULT_CANGJIE_MODE_ENABLED
             self.pinyin_mode_enabled = DEFAULT_PINYIN_MODE_ENABLED
+            self.japanese_mode_enabled = DEFAULT_JAPANESE_MODE_ENABLED
 
         # Initialize
         start_time = time.time()

@@ -26,6 +26,7 @@ from .ime import (
     ENGLISH_VALID_KEYSTROKE_SET,
     PINYIN_VALID_KEYSTROKE_SET,
     CANGJIE_VALID_KEYSTROKE_SET,
+    JAPANESE_VALID_KEYSTROKE_SET,
 )
 
 TOTAL_VALID_KEYSTROKE_SET = (
@@ -409,7 +410,7 @@ class KeyEventHandler:
         possible_sentences_with_distance = [
             {
                 "sentence": sentence,
-                "distance": self._calculate_sentence_distance(sentence)
+                "distance": self._calculate_sentence_distance(sentence),
             }
             for sentence in possible_sentences
         ]
@@ -758,12 +759,16 @@ class KeyEventHandler:
 
 if __name__ == "__main__":
     handler = KeyEventHandler()
-    phase1_result = handler.old_phase1("zuekua jwjc yk6hqgdi factories")
-    new_result = handler.new_reconstruct("zuekua jwjc yk6hqgdi factories")
+    test_case = "soshite baai hello world"
+    phase1_result = handler.old_phase1(test_case)
+    new_result = handler.new_reconstruct(test_case)
     print("---------------------")
     print("PHASE1", phase1_result)
     print("NEW", new_result)
     print("---------------------")
     print("PHASE1", handler._calculate_sentence_distance(phase1_result[0]))
     print("NEW", handler._calculate_sentence_distance(new_result[0]))
+    print("---------------------")
+    print("PHASE1", handler.end_to_end(test_case))
+    print("NEW", handler.end_to_end(test_case))
     print("---------------------")

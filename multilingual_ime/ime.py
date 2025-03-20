@@ -1,11 +1,11 @@
 import re
 from pathlib import Path
-from .core.custom_decorators import lru_cache_with_doc
 from itertools import chain
 from abc import ABC, abstractmethod
 
 from .ime_detector import IMETokenDetectorDL
 from .keystroke_map_db import KeystrokeMappingDB
+from .core.custom_decorators import lru_cache_with_doc
 
 # Define the IME names
 BOPOMOFO_IME = "bopomofo"
@@ -13,6 +13,7 @@ CANGJIE_IME = "cangjie"
 PINYIN_IME = "pinyin"
 ENGLISH_IME = "english"
 SPECIAL_IME = "special"
+JAPANESE_IME = "japanese"
 
 
 # Define IME DB paths
@@ -23,6 +24,7 @@ ENGLISH_IME_DB_PATH = Path(__file__).parent / "src" / "english_keystroke_map.db"
 SPECIAL_IME_DB_PATH = (
     Path(__file__).parent / "src" / "special_character_keystroke_map.db"
 )
+JAPANESE_IME_DB_PATH = Path(__file__).parent / "src" / "japanese_keystroke_map.db"
 
 # Define IME valid keystroke set
 BOPOMOFO_VALID_KEYSTROKE_SET = set("1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/- ")
@@ -31,6 +33,7 @@ PINYIN_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 ENGLISH_VALID_KEYSTROKE_SET = set(
     " abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+JAPANESE_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 
 # Define IME token length
 BOPOMOFO_IME_MIN_TOKEN_LENGTH = 2
@@ -40,10 +43,13 @@ CANGJIE_IME_MAX_TOKEN_LENGTH = 5
 PINYIN_IME_MIN_TOKEN_LENGTH = 1
 PINYIN_IME_MAX_TOKEN_LENGTH = 6
 ENGLISH_IME_MIN_TOKEN_LENGTH = 1
-ENGLISH_IME_MAX_TOKEN_LENGTH = 30  # TODO: Need to be confirmed (what is the max length of 80% frequenly used english word), 30 is a random number
+ENGLISH_IME_MAX_TOKEN_LENGTH = 30  # FIXME: Need to be confirmed (what is the max length of 80% frequency used english word), 30 is a random number
+JAPANESE_IME_MIN_TOKEN_LENGTH = 1
+JAPANESE_IME_MAX_TOKEN_LENGTH = 30  # FIXME: Need to be confirmed, kanji can be long
 
-# Define IME token length varience (for case of user input additional keystroke)
-IME_TOKEN_LENGTH_VARIENCE = 1
+
+# Define IME token length variance (for case of user input additional keystroke)
+IME_TOKEN_LENGTH_VARIANCE = 1
 
 # Define IME token detector model paths
 BOPOMOFO_IME_TOKEN_DETECTOR_MODEL_PATH = (
@@ -70,6 +76,12 @@ ENGLISH_IME_TOKEN_DETECTOR_MODEL_PATH = (
     / "models"
     / "one_hot_dl_token_model_english_2024-10-27.pth"
 )
+JAPANESE_IME_TOKEN_DETECTOR_MODEL_PATH = (
+    Path(__file__).parent
+    / "src"
+    / "models"
+    / "one_hot_dl_token_model_japanese_2025-03-20.pth"
+)
 
 
 class IME(ABC):
@@ -79,6 +91,10 @@ class IME(ABC):
 
     @abstractmethod
     def tokenize(self, keystroke: str) -> list[list[str]]:
+        pass
+
+    @abstractmethod
+    def string_to_keystroke(self, string: str) -> str:
         pass
 
     def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
@@ -116,21 +132,25 @@ class BopomofoIME(IME):
             return []
 
         bopomofo_tokens = cut_bopomofo_with_regex(keystroke)
-        assert (
-            "".join(bopomofo_tokens) == keystroke
-        ), f"Error: {__class__}.tokenize failed, keystroke'{keystroke}' mismatch with {bopomofo_tokens}"
+        assert "".join(bopomofo_tokens) == keystroke, (
+            "Error: {__class__}.tokenize failed, "
+            f"keystroke'{keystroke}' mismatch with {bopomofo_tokens}"
+        )
         return [bopomofo_tokens]
 
     def is_valid_token(self, keystroke):
         if (
-            len(keystroke) < BOPOMOFO_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
+            len(keystroke) < BOPOMOFO_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIANCE
             or len(keystroke)
-            > BOPOMOFO_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+            > BOPOMOFO_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
         if any(c not in BOPOMOFO_VALID_KEYSTROKE_SET for c in keystroke):
             return False
         return super().is_valid_token(keystroke)
+
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError("BopomofoIME does not support string_to_keystroke")
 
 
 class CangjieIME(IME):
@@ -162,13 +182,16 @@ class CangjieIME(IME):
 
     def is_valid_token(self, keystroke):
         if (
-            len(keystroke) < CANGJIE_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
-            or len(keystroke) > CANGJIE_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+            len(keystroke) < CANGJIE_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIANCE
+            or len(keystroke) > CANGJIE_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
         if any(c not in CANGJIE_VALID_KEYSTROKE_SET for c in keystroke):
             return False
         return super().is_valid_token(keystroke)
+
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError("CangjieIME does not support string_to_keystroke")
 
 
 with open(
@@ -177,8 +200,8 @@ with open(
     intact_pinyin_set = set(s for s in f.read().split("\n"))
 
 special_characters = " !@#$%^&*()-_=+[]{}|;:'\",.<>?/`~"
-sepcial_char_set = [c for c in special_characters]
-intact_pinyin_set = intact_pinyin_set.union(sepcial_char_set)
+special_char_set = [c for c in special_characters]
+intact_pinyin_set = intact_pinyin_set.union(special_char_set)
 
 # Add special characters, since they will be separated individually
 
@@ -247,13 +270,16 @@ class PinyinIME(IME):
 
     def is_valid_token(self, keystroke):
         if (
-            len(keystroke) < PINYIN_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
-            or len(keystroke) > PINYIN_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+            len(keystroke) < PINYIN_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIANCE
+            or len(keystroke) > PINYIN_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
         if any(c not in PINYIN_VALID_KEYSTROKE_SET for c in keystroke):
             return False
         return super().is_valid_token(keystroke)
+
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError("PinyinIME does not support string_to_keystroke")
 
 
 class EnglishIME(IME):
@@ -283,8 +309,8 @@ class EnglishIME(IME):
 
     def is_valid_token(self, keystroke):
         if (
-            len(keystroke) < ENGLISH_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIENCE
-            or len(keystroke) > ENGLISH_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIENCE
+            len(keystroke) < ENGLISH_IME_MIN_TOKEN_LENGTH - IME_TOKEN_LENGTH_VARIANCE
+            or len(keystroke) > ENGLISH_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
         if keystroke == " ":
@@ -295,18 +321,21 @@ class EnglishIME(IME):
             return False
         return super().is_valid_token(keystroke)
 
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError("EnglishIME does not support string_to_keystroke")
+
 
 class SpecialCharacterIME(IME):
     def __init__(self):
         super().__init__()
         self.keystroke_map_db = KeystrokeMappingDB(db_path=SPECIAL_IME_DB_PATH)
 
-    def tokenize(self, keystrokes: str) -> list[list[str]]:
+    def tokenize(self, keystroke: str) -> list[list[str]]:
         result = []
         i = 0
-        while i < len(keystrokes):
-            if keystrokes[i] == "©":
-                result.append("©" + keystrokes[i + 1])
+        while i < len(keystroke):
+            if keystroke[i] == "©":
+                result.append("©" + keystroke[i + 1])
                 i += 2
             else:
                 i += 1
@@ -316,6 +345,69 @@ class SpecialCharacterIME(IME):
         if keystroke.startswith("©") and len(keystroke) == 2:
             return True
         return False
+
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError(
+            "SpecialCharacterIME does not support string_to_keystroke"
+        )
+
+
+with open(
+    Path(__file__).parent / "src" / "intact_japanese.txt", "r", encoding="utf-8"
+) as f:
+    intact_japanese_set = set(s for s in f.read().split("\n"))
+
+
+class JapaneseIME(IME):
+    def __init__(self):
+        super().__init__()
+        self.token_detector = IMETokenDetectorDL(
+            model_path=JAPANESE_IME_TOKEN_DETECTOR_MODEL_PATH,
+            device="cpu",
+            verbose_mode=False,
+        )
+        self.keystroke_map_db = KeystrokeMappingDB(db_path=JAPANESE_IME_DB_PATH)
+
+    def tokenize(self, keystroke: str) -> list[list[str]]:
+        def regex_split(input_str, delimiters):
+            pattern = "|".join(
+                sorted(map(re.escape, delimiters), key=len, reverse=True)
+            )
+            ans = [token for token in re.split(f"({pattern})", input_str) if token]
+            return ans
+
+        def group_japanese_tokens(japanese_tokens):
+            new_japanese_tokens = []
+            pre_token = ""
+            for token in japanese_tokens:
+                if token in intact_japanese_set:
+                    if pre_token:
+                        new_japanese_tokens.append(pre_token)
+                    new_japanese_tokens.append(token)
+                    pre_token = ""
+                else:
+                    pre_token += token
+            if pre_token:
+                new_japanese_tokens.append(pre_token)
+            return new_japanese_tokens
+
+        if not keystroke:
+            return []
+        japanese_tokens = regex_split(keystroke, list(intact_japanese_set))
+        japanese_tokens = group_japanese_tokens(japanese_tokens)
+        assert "".join(japanese_tokens) == keystroke
+        return [japanese_tokens]
+
+    def is_valid_token(self, keystroke):
+        if any(c not in ENGLISH_VALID_KEYSTROKE_SET for c in keystroke):
+            return False
+        if keystroke in intact_japanese_set:
+            return True
+        return super().is_valid_token(keystroke)
+
+    def string_to_keystroke(self, string: str) -> str:
+        raise NotImplementedError("JapaneseIME does not support string_to_keystroke")
+        #  TODO: Implement string_to_keystroke by
 
 
 class IMEFactory:
@@ -331,5 +423,6 @@ class IMEFactory:
             return EnglishIME()
         if ime_type == SPECIAL_IME:
             return SpecialCharacterIME()
-        else:
-            raise ValueError(f"IME type {ime_type} not supported")
+        if ime_type == JAPANESE_IME:
+            return JapaneseIME()
+        raise ValueError(f"IME type {ime_type} not supported")

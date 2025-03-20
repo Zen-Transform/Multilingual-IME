@@ -1,4 +1,11 @@
-from .ime import BOPOMOFO_IME, CANGJIE_IME, ENGLISH_IME, PINYIN_IME, SPECIAL_IME
+from .ime import (
+    BOPOMOFO_IME,
+    CANGJIE_IME,
+    ENGLISH_IME,
+    PINYIN_IME,
+    SPECIAL_IME,
+    JAPANESE_IME,
+)
 
 
 class MultiConfig:
@@ -15,6 +22,7 @@ class MultiConfig:
                     CANGJIE_IME: True,
                     ENGLISH_IME: True,
                     PINYIN_IME: True,
+                    JAPANESE_IME: True,
                     SPECIAL_IME: True,
                 },
             }
@@ -54,5 +62,5 @@ class MultiConfig:
 
         return self._config["ime_activation_status"][ime_name]
 
-    def _load_config(self):
+    def _load_config(self, config_dict: dict):
         raise NotImplementedError(" _load_config method not implemented")
