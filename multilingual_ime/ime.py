@@ -1,3 +1,19 @@
+"""
+This module defines a multilingual Input Method Editor (IME) framework that supports
+various languages and input methods. It provides functionality for tokenizing keystrokes,
+validating tokens, and retrieving token candidates.
+
+The IME framework consists of the following classes:
+- **IME:** An abstract base class for IME implementations.
+- **BopomofoIME:** An implementation for Bopomofo input method.
+- **CangjieIME:** An implementation for Cangjie input method.
+- **PinyinIME:** An implementation for Pinyin input method.
+- **EnglishIME:** An implementation for English input method.
+- **SpecialCharacterIME:** An implementation for special characters input method.
+- **JapaneseIME:** An implementation for Japanese input method.
+- **IMEFactory:** A factory class for creating IME instances based on the IME type.
+"""
+
 import re
 from pathlib import Path
 from itertools import chain
@@ -85,32 +101,81 @@ JAPANESE_IME_TOKEN_DETECTOR_MODEL_PATH = (
 
 
 class IME(ABC):
+    """
+    IME is an abstract base class (ABC) that defines the structure \
+    and behavior of an Input Method Editor (IME). 
+    """
+
     def __init__(self):
         self.token_detector: IMETokenDetectorDL = None
         self.keystroke_map_db: KeystrokeMappingDB = None
 
     @abstractmethod
     def tokenize(self, keystroke: str) -> list[list[str]]:
-        pass
+        """
+        Tokenizes the given keystroke input base on the IME's specific rules.
+        The output is a nested list contains different ways of tokenizing the input keystroke.
+
+        Args:
+            keystroke (str): The input string representing a sequence of keystrokes.
+        Returns:
+            list[list[str]]: A nested list where each inner list contains different ways
+            of tokenizing the input keystroke.
+        """
 
     @abstractmethod
     def string_to_keystroke(self, string: str) -> str:
-        pass
+        """
+        Converts a string of characters into the corresponding keystroke inputs
+        that, when typed, will produce the original string based on the rules
+        of the corresponding Input Method Editor (IME).
+
+        Args:
+            string (str): The input string of characters to be converted.
+        Returns:
+            str: The sequence of keystroke inputs that will generate the input string
+             when used with the IME.
+        """
 
     def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+        """
+        Retrieve a list of candidate that are closest to the given token in the IME's database.
+
+        Args:
+            token (str): The input token (keystroke) for which to find candidate matches.
+        Returns:
+            list[tuple[str, str, int]]: A list of tuples (keystroke, word, frequency)
+        """
         return self.keystroke_map_db.get_closest(token)
 
-    def get_closest_word_distance(self, token: str) -> list[tuple[str, str, int]]:
-        return self.keystroke_map_db.closest_word_distance(token)
-
     def is_valid_token(self, keystroke: str) -> bool:
+        """
+        Check if the given keystroke is a valid token.
+
+        Args:
+            keystroke (str): The input keystroke to validate.
+        Returns:
+            bool: True if the keystroke is a valid token, False otherwise.
+        """
         return self.token_detector.predict(keystroke)
 
     def closest_word_distance(self, keystroke: str) -> int:
+        """
+        Calculate the distance for a given keystroke to the closest word in the IME's database.
+
+        Args:
+            keystroke (str): The keystroke for which to find the closest word distance.
+            int: The distance of the closest word to the given keystroke.
+        """
         return self.keystroke_map_db.closest_word_distance(keystroke)
 
 
 class BopomofoIME(IME):
+    """
+    An implementation of the Bopomofo Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
+
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -154,6 +219,11 @@ class BopomofoIME(IME):
 
 
 class CangjieIME(IME):
+    """
+    An implementation of the Cangjie Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
+
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -199,8 +269,8 @@ with open(
 ) as f:
     intact_pinyin_set = set(s for s in f.read().split("\n"))
 
-special_characters = " !@#$%^&*()-_=+[]{}|;:'\",.<>?/`~"
-special_char_set = [c for c in special_characters]
+SPECIAL_CHARACTERS = " !@#$%^&*()-_=+[]{}|;:'\",.<>?/`~"
+special_char_set = set(list(SPECIAL_CHARACTERS))
 intact_pinyin_set = intact_pinyin_set.union(special_char_set)
 
 # Add special characters, since they will be separated individually
@@ -212,6 +282,11 @@ all_cut_pinyin_ans = {}
 
 
 class PinyinIME(IME):
+    """
+    An implementation of the Pinyin Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
+
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -283,6 +358,11 @@ class PinyinIME(IME):
 
 
 class EnglishIME(IME):
+    """
+    An implementation of the English Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
+
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -326,6 +406,11 @@ class EnglishIME(IME):
 
 
 class SpecialCharacterIME(IME):
+    """
+    An implementation of the Special Character Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
+
     def __init__(self):
         super().__init__()
         self.keystroke_map_db = KeystrokeMappingDB(db_path=SPECIAL_IME_DB_PATH)
@@ -359,6 +444,10 @@ with open(
 
 
 class JapaneseIME(IME):
+    """
+    An implementation of the Japanese Input Method Editor (IME) that supports tokenization,
+    conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
+    """
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -411,8 +500,22 @@ class JapaneseIME(IME):
 
 
 class IMEFactory:
+    """
+    A factory class for creating IME instances based on
+    the IME type specified. It provides a static method
+    `create_ime` that returns an instance of the specified IME.
+    """
     @staticmethod
     def create_ime(ime_type: str) -> IME:
+        """
+        Create an instance of the specified IME based on the IME type.
+
+        Args:
+            ime_type (str): The type of the IME to create. Supported IME types are:
+            "bopomofo", "cangjie", "pinyin", "english", "special", "japanese", 
+        Returns:
+            IME: An instance of the specified IME.
+        """
         if ime_type == BOPOMOFO_IME:
             return BopomofoIME()
         if ime_type == CANGJIE_IME:
