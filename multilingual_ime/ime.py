@@ -401,6 +401,15 @@ class EnglishIME(IME):
             return False
         return super().is_valid_token(keystroke)
 
+    # Override
+    def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+        results = self.keystroke_map_db.get_closest(token)
+        new_results = []
+        for r in results:
+            if r[0].lower() == token.lower():
+                new_results.append((r[0], token, r[2]))
+        return new_results
+
     def string_to_keystroke(self, string: str) -> str:
         raise NotImplementedError("EnglishIME does not support string_to_keystroke")
 
@@ -448,6 +457,7 @@ class JapaneseIME(IME):
     An implementation of the Japanese Input Method Editor (IME) that supports tokenization,
     conversion of strings to keystrokes, validation of tokens, and retrieval of candidate tokens.
     """
+
     def __init__(self):
         super().__init__()
         self.token_detector = IMETokenDetectorDL(
@@ -505,6 +515,7 @@ class IMEFactory:
     the IME type specified. It provides a static method
     `create_ime` that returns an instance of the specified IME.
     """
+
     @staticmethod
     def create_ime(ime_type: str) -> IME:
         """
@@ -512,7 +523,7 @@ class IMEFactory:
 
         Args:
             ime_type (str): The type of the IME to create. Supported IME types are:
-            "bopomofo", "cangjie", "pinyin", "english", "special", "japanese", 
+            "bopomofo", "cangjie", "pinyin", "english", "special", "japanese",
         Returns:
             IME: An instance of the specified IME.
         """

@@ -11,11 +11,7 @@ from .core.F import (
 )
 from .ime import (
     IMEFactory,
-    BOPOMOFO_IME,
-    CANGJIE_IME,
     ENGLISH_IME,
-    PINYIN_IME,
-    SPECIAL_IME,
 )
 from .phrase_db import PhraseDataBase
 from .muti_config import MultiConfig
@@ -33,6 +29,7 @@ TOTAL_VALID_KEYSTROKE_SET = (
     BOPOMOFO_VALID_KEYSTROKE_SET.union(ENGLISH_VALID_KEYSTROKE_SET)
     .union(PINYIN_VALID_KEYSTROKE_SET)
     .union(CANGJIE_VALID_KEYSTROKE_SET)
+    .union(JAPANESE_VALID_KEYSTROKE_SET)
 )
 
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
@@ -221,7 +218,7 @@ class KeyEventHandler:
             else:
                 if (
                     key == "enter"
-                ):  # Conmmit the composition string, update the db & reset all states
+                ):  # Commit the composition string, update the db & reset all states
                     self._unfreeze_to_freeze()
                     if self.auto_phrase_learn:
                         self.update_user_phrase_db(self.composition_string)
@@ -366,12 +363,15 @@ class KeyEventHandler:
             self.logger.info("No candidates found for token '%s'", token)
             return [Candidate(token, token, 0, token, 0, "NO_IME")]
 
-        candidates = sorted(
-            candidates, key=lambda x: x.distance
-        )  # First sort by distance
-        candidates = sorted(
-            candidates, key=lambda x: x.word_frequency, reverse=True
-        )  # Then sort by frequency
+        # First sort by distance
+        candidates = sorted(candidates, key=lambda x: x.distance)
+
+        # Filter out the candidates with distance > smallest_distance
+        smallest_distance = candidates[0].distance
+        candidates = filter(lambda x: x.distance <= smallest_distance, candidates)
+
+        # Then sort by frequency
+        candidates = sorted(candidates, key=lambda x: x.word_frequency, reverse=True)
 
         # This is a hack to increase the rank of the token if it is in the user frequency db
         new_candidates = []
@@ -541,7 +541,8 @@ class KeyEventHandler:
         Args:
             keystroke (str): The keystroke to search for
         Returns:
-            list: A list of **list of str** containing the possible sentences constructed from the token pool
+            list: A list of **list of str** containing the \
+            possible sentences constructed from the token pool
         """
 
         def dp_search(keystroke: str, token_pool: set[str]) -> list[list[str]]:
