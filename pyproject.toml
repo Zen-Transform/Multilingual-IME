@@ -1,6 +1,6 @@
 [project]
 name = "multilingual-ime"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = [
     { name = "JY9150", email = "90738099+JY9150@users.noreply.github.com"}
