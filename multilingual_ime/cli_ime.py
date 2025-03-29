@@ -108,8 +108,8 @@ class CommandLineIME:
     def update_ui(self):
         print(
             "{:<}\t\t\t{: <5}{: <20}\t{: <5}\t{: <10}\t{: <10}".format(
-                self.composition_with_cusor_string,
-                self.key_event_handler.composition_index,
+                self.composition_with_cursor_string,
+                self.composition_index_string,
                 self.candidate_words_with_cursor_string,
                 self.selection_index_string,
                 f"Time spend: {self.time_spend:.3f}",
@@ -145,11 +145,11 @@ class CommandLineIME:
         keyboard.wait("esc")
 
     @property
-    def composition_with_cusor_string(self):
+    def composition_with_cursor_string(self):
         total_string = []
         total_composition_words = self.key_event_handler.total_composition_words
         freezed_index = self.key_event_handler.freezed_index
-        unfreezed_composition_words = self.key_event_handler.unfreeze_composition_words
+        unfreeze_composition_words = self.key_event_handler.unfreeze_composition_words
         composition_index = self.key_event_handler.composition_index
 
         for i, word in enumerate(total_composition_words):
@@ -157,7 +157,7 @@ class CommandLineIME:
                 total_string.append(
                     (Fore.BLUE if self.color_mode else "") + word + Style.RESET_ALL
                 )
-            elif freezed_index <= i < freezed_index + len(unfreezed_composition_words):
+            elif freezed_index <= i < freezed_index + len(unfreeze_composition_words):
                 total_string.append(
                     (Fore.YELLOW if self.color_mode else "") + word + Style.RESET_ALL
                 )
@@ -195,11 +195,14 @@ class CommandLineIME:
         )
 
     @property
-    def compsition_index_string(self):
+    def composition_index_string(self):
+        composition_index = self.key_event_handler.composition_index
+        total_composition_words = self.key_event_handler.total_composition_words
+
         return (
-            Fore.GREEN + str(self.key_event_handler.composition_index) + Style.RESET_ALL
-            if self.key_event_handler.in_selection_mode
-            else ""
+            Fore.GREEN
+            + str(len("".join(total_composition_words[:composition_index])))
+            + Style.RESET_ALL
         )
 
 
