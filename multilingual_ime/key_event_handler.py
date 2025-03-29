@@ -75,6 +75,7 @@ class KeyEventHandler:
         self.unfreeze_keystrokes = ""
         self.unfreeze_token_sentence = []
         self.unfreeze_composition_words = []
+        self.commit_string = ""
 
         # Selection States
         self.in_selection_mode = False
@@ -181,6 +182,10 @@ class KeyEventHandler:
 
     def handle_key(self, key: str) -> None:
         special_keys = ["enter", "left", "right", "down", "up", "esc"]
+        if self.commit_string:
+            self.logger.info("Commit string: (%s) is not empty, reset to empty", self.commit_string)
+            self.commit_string = ""
+
         if key in special_keys:
             if self.in_selection_mode:
                 if key == "down":
@@ -219,6 +224,7 @@ class KeyEventHandler:
                 if (
                     key == "enter"
                 ):  # Commit the composition string, update the db & reset all states
+                    self.commit_string = self.composition_string
                     self._unfreeze_to_freeze()
                     if self.auto_phrase_learn:
                         self.update_user_phrase_db(self.composition_string)
