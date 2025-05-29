@@ -261,6 +261,9 @@ class KeyEventHandler:
 
                 return
         else:
+            if self.in_selection_mode:  # If in selection mode and keep typing, reset the selection states
+                self._reset_selection_states()
+
             if key == "backspace":
                 if self.unfreeze_index > 0:
                     self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1]
