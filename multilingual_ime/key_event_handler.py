@@ -659,8 +659,6 @@ class KeyEventHandler:
             sentence_graph.add_token_path(sep_tokens)
 
         possible_paths = sentence_graph.get_sentence()
-        self.logger.info("Found %d possible paths", len(possible_paths))
-
         return possible_paths[:top_n]
 
     def old_phase1(self, keystroke: str) -> list[str]:
