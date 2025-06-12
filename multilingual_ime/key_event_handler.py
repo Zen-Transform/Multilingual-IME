@@ -134,7 +134,7 @@ class KeyEventHandler:
     @property
     def activated_imes(self) -> list[str]:
         return self._config.ACTIVE_IME
-        
+
     @property
     def token_pool(self) -> list[str]:
         return list(self._token_pool_set)
@@ -185,7 +185,9 @@ class KeyEventHandler:
     def handle_key(self, key: str) -> None:
         special_keys = ["enter", "left", "right", "down", "up", "esc"]
         if self.commit_string:
-            self.logger.info("Commit string: (%s) is not empty, reset to empty", self.commit_string)
+            self.logger.info(
+                "Commit string: (%s) is not empty, reset to empty", self.commit_string
+            )
             self.commit_string = ""
 
         if key in special_keys:
@@ -263,7 +265,9 @@ class KeyEventHandler:
 
                 return
         else:
-            if self.in_selection_mode:  # If in selection mode and keep typing, reset the selection states
+            if (
+                self.in_selection_mode
+            ):  # If in selection mode and keep typing, reset the selection states
                 self._reset_selection_states()
 
             if key == "backspace":
@@ -613,7 +617,7 @@ class KeyEventHandler:
     def update_user_phrase_db(self, text: str) -> None:
         raise NotImplementedError("update_user_phrase_db is not implemented yet")
 
-    def new_reconstruct(self, keystroke: str, top_n: int = 10) -> list[list[str]]:
+    def new_reconstruct(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
         if not keystroke:
             return []
 
@@ -630,9 +634,9 @@ class KeyEventHandler:
 
         token_pool = set([token for sep in possible_seps for token in sep])
         new_possible_seps = []
-        for sep in possible_seps:
+        for sep_tokens in possible_seps:
             new_sep = []
-            for token in sep:
+            for token in sep_tokens:
                 is_sep = False
                 for i in range(1, len(token)):
                     if token[:i] in token_pool:
@@ -646,38 +650,16 @@ class KeyEventHandler:
         new_possible_seps.extend(possible_seps)
 
         self.logger.info("Creating Graph with %d possible seps", len(new_possible_seps))
-        id_maps = {}
-        graph = SentenceGraph()
 
-        # TODO: Hide the creation of the graph in the SentenceGraph class
-        for sep in new_possible_seps:
-            prev_str = ""
-            prev_token_id = "<start>"
-            for token in sep:
-                empty_token_id = f"<none>_{len(prev_str)}_{len(prev_str)}"
-                token_id = f"{token}_{len(prev_str)}_{len(prev_str + token)}"  # Hash it
+        sentence_graph = SentenceGraph()
+        for sep_tokens in new_possible_seps:
+            sep_tokens = [
+                (token, self.get_token_distance(token)) for token in sep_tokens
+            ]
+            sentence_graph.add_token_path(sep_tokens)
 
-                id_maps[token_id] = token
-                graph.add_edge(prev_token_id, empty_token_id, 0)
-                graph.add_edge(empty_token_id, token_id, self.get_token_distance(token))
-                prev_str += token
-                prev_token_id = token_id
-            graph.add_edge(prev_token_id, "<end>", 0)
-
-        shortest_paths = graph.find_shortest_paths("<start>", "<end>")
-        self.logger.info("Found %d shortest paths", len(shortest_paths))
-
-        possible_paths = []
-        for path in shortest_paths:
-            path = list(
-                filter(
-                    lambda x: x not in ["<start>", "<end>"]
-                    and not x.startswith("<none>"),
-                    path,
-                )
-            )
-            possible_paths.append([id_maps[id] for id in path])
-        possible_paths = sorted(possible_paths, key=len, reverse=False)
+        possible_paths = sentence_graph.get_sentence()
+        self.logger.info("Found %d possible paths", len(possible_paths))
 
         return possible_paths[:top_n]
 
