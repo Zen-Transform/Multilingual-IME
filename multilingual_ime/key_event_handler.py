@@ -1,3 +1,4 @@
+import sys
 import logging
 
 from pathlib import Path
@@ -336,7 +337,7 @@ class KeyEventHandler:
         Returns:
             int: The distance to the closest word
         """
-        min_distance = float("inf")
+        min_distance = sys.maxsize
 
         for ime_type in self.activated_imes:
             if not self.ime_handlers[ime_type].is_valid_token(token):
@@ -344,6 +345,8 @@ class KeyEventHandler:
 
             method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
             min_distance = min(min_distance, method_distance)
+            if min_distance == 0:
+                break
         return min_distance
 
     def token_to_candidates(self, token: str) -> list[Candidate]:
