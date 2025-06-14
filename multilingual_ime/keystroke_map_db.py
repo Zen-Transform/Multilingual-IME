@@ -5,6 +5,7 @@ A module for interacting with the keystroke mapping database.
 import sqlite3
 import threading
 from pathlib import Path
+from typing import Union
 
 from .trie import modified_levenshtein_distance
 from .core.custom_decorators import lru_cache_with_doc
@@ -18,8 +19,7 @@ class KeystrokeMappingDB:
     Args:
         db_path (str): The path to the database (Sqlite DB) file.
     """
-
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: Union[str, Path]):
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
 
@@ -93,7 +93,7 @@ class KeystrokeMappingDB:
 
     @lru_cache_with_doc(maxsize=128)
     def get_closest_word(
-        self, keystroke: str, max_search_distance: int = 1
+        self, keystroke: str, max_search_distance: int = 2
     ) -> list[tuple[str, str, int]]:
         """
         Get the **(keystroke, word, frequency)** tuple entry with smallest \
@@ -180,13 +180,15 @@ class KeystrokeMappingDB:
         return bool(self.get_word(keystroke))
 
     @lru_cache_with_doc(maxsize=128)
-    def get_closest_word_distance(self, keystroke: str) -> int:
+    def get_closest_word_distance(self, keystroke: str, max_search_distance: int = 2) -> int:
         """
         Get the smallest Levenshtein distance between \
         the given keystroke and the words in the database.
 
         Args:
             keystroke (str): The keystroke to search for.
+            max_search_distance (int, optional): The maximum Levenshtein distance to search for. \
+            Defaults to 2.
 
         Returns:
             int: The smallest Levenshtein distance between \
@@ -197,6 +199,8 @@ class KeystrokeMappingDB:
         while True:
             if self.fuzzy_get_exist(keystroke, distance):
                 return distance
+            if distance >= max_search_distance:
+                return max_search_distance
             distance += 1
 
     def word_to_keystroke(self, keystroke_results: str) -> list[str]:
