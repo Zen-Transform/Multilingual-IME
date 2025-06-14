@@ -146,7 +146,7 @@ class IME(ABC):
         Returns:
             list[tuple[str, str, int]]: A list of tuples (keystroke, word, frequency)
         """
-        return self.keystroke_map_db.get_closest(token)
+        return self.keystroke_map_db.get_closest_word(token)
 
     def is_valid_token(self, keystroke: str) -> bool:
         """
@@ -167,7 +167,7 @@ class IME(ABC):
             keystroke (str): The keystroke for which to find the closest word distance.
             int: The distance of the closest word to the given keystroke.
         """
-        return self.keystroke_map_db.closest_word_distance(keystroke)
+        return self.keystroke_map_db.get_closest_word_distance(keystroke)
 
 
 class BopomofoIME(IME):
@@ -403,7 +403,7 @@ class EnglishIME(IME):
 
     # Override
     def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
-        results = self.keystroke_map_db.get_closest(token)
+        results = self.keystroke_map_db.get_closest_word(token)
         new_results = []
         for r in results:
             if r[0].lower() == token.lower():
