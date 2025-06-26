@@ -26,8 +26,8 @@ class SentenceGraph:
 
     def _find_shortest_paths(self, start_id: str, end_id: str) -> list[list[str]]:
         # Use A* algorithm with heuristic: number of characters to end node
-        predecessor = {id: set() for id in self._graph}
-        distance = {id: -1 for id in self._graph}
+        predecessor = {node_id: set() for node_id in self._graph}
+        distance = {node_id: -1 for node_id in self._graph}
         distance[start_id] = 0
 
         priority_queue = [(0, 0, start_id)]

@@ -19,6 +19,7 @@ class KeystrokeMappingDB:
     Args:
         db_path (str): The path to the database (Sqlite DB) file.
     """
+
     def __init__(self, db_path: Union[str, Path]):
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
@@ -63,9 +64,9 @@ class KeystrokeMappingDB:
         """
         with self._lock:
             self._cursor.execute(
-                f"SELECT keystroke, word, frequency FROM keystroke_map \
-                WHERE levenshtein(keystroke, ?) <= {max_distance}",
-                (keystroke,),
+                "SELECT keystroke, word, frequency FROM keystroke_map \
+                WHERE levenshtein(keystroke, ?) <= ?",
+                (keystroke, max_distance),
             )
             return self._cursor.fetchall()
 
@@ -84,9 +85,9 @@ class KeystrokeMappingDB:
         """
         with self._lock:
             self._cursor.execute(
-                f"SELECT EXISTS(SELECT 1 FROM keystroke_map \
-                WHERE levenshtein(keystroke, ?) <= {distance})",
-                (keystroke,),
+                "SELECT EXISTS(SELECT 1 FROM keystroke_map \
+                WHERE levenshtein(keystroke, ?) <= ?)",
+                (keystroke, distance),
             )
 
             return bool(self._cursor.fetchone()[0])
@@ -180,7 +181,9 @@ class KeystrokeMappingDB:
         return bool(self.get_word(keystroke))
 
     @lru_cache_with_doc(maxsize=128)
-    def get_closest_word_distance(self, keystroke: str, max_search_distance: int = 2) -> int:
+    def get_closest_word_distance(
+        self, keystroke: str, max_search_distance: int = 2
+    ) -> int:
         """
         Get the smallest Levenshtein distance between \
         the given keystroke and the words in the database.
@@ -215,7 +218,8 @@ class KeystrokeMappingDB:
         """
         with self._lock:
             self._cursor.execute(
-                "SELECT keystroke FROM keystroke_map WHERE word = ?", (keystroke_results,)
+                "SELECT keystroke FROM keystroke_map WHERE word = ?",
+                (keystroke_results,),
             )
             return self._cursor.fetchall()
 
@@ -297,6 +301,7 @@ class KeystrokeMappingDB:
 
 
 if __name__ == "__main__":
+    # Example usage of the KeystrokeMappingDB class
     import pathlib
 
     path = pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
