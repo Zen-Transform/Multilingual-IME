@@ -1,5 +1,6 @@
+import sys
 import logging
-import heapq
+
 from pathlib import Path
 
 from .candidate import Candidate
@@ -15,7 +16,7 @@ from .ime import (
 )
 from .phrase_db import PhraseDataBase
 from .muti_config import MultiConfig
-
+from .sentence_graph import SentenceGraph
 
 from .ime import (
     BOPOMOFO_VALID_KEYSTROKE_SET,
@@ -53,7 +54,6 @@ class KeyEventHandler:
         self._user_frequency_db = KeystrokeMappingDB(USER_FREQUENCY_DB_PATH)
 
         # Setup IMEs
-        self.activated_imes: list[str] = self._config.ACTIVE_IME
         self.ime_handlers = {
             ime: IMEFactory.create_ime(ime) for ime in self.activated_imes
         }
@@ -131,7 +131,10 @@ class KeyEventHandler:
 
     def set_activation_status(self, ime_type: str, status: bool) -> None:
         self._config.setIMEActivationStatus(ime_name=ime_type, status=status)
-        self.activated_imes = self._config.ACTIVE_IME
+
+    @property
+    def activated_imes(self) -> list[str]:
+        return self._config.ACTIVE_IME
 
     @property
     def token_pool(self) -> list[str]:
@@ -183,7 +186,9 @@ class KeyEventHandler:
     def handle_key(self, key: str) -> None:
         special_keys = ["enter", "left", "right", "down", "up", "esc"]
         if self.commit_string:
-            self.logger.info("Commit string: (%s) is not empty, reset to empty", self.commit_string)
+            self.logger.info(
+                "Commit string: (%s) is not empty, reset to empty", self.commit_string
+            )
             self.commit_string = ""
 
         if key in special_keys:
@@ -261,7 +266,9 @@ class KeyEventHandler:
 
                 return
         else:
-            if self.in_selection_mode:  # If in selection mode and keep typing, reset the selection states
+            if (
+                self.in_selection_mode
+            ):  # If in selection mode and keep typing, reset the selection states
                 self._reset_selection_states()
 
             if key == "backspace":
@@ -330,7 +337,7 @@ class KeyEventHandler:
         Returns:
             int: The distance to the closest word
         """
-        min_distance = float("inf")
+        min_distance = sys.maxsize
 
         for ime_type in self.activated_imes:
             if not self.ime_handlers[ime_type].is_valid_token(token):
@@ -338,6 +345,8 @@ class KeyEventHandler:
 
             method_distance = self.ime_handlers[ime_type].closest_word_distance(token)
             min_distance = min(min_distance, method_distance)
+            if min_distance == 0:
+                break
         return min_distance
 
     def token_to_candidates(self, token: str) -> list[Candidate]:
@@ -611,81 +620,7 @@ class KeyEventHandler:
     def update_user_phrase_db(self, text: str) -> None:
         raise NotImplementedError("update_user_phrase_db is not implemented yet")
 
-    def new_reconstruct(self, keystroke: str, top_n: int = 10) -> list[list[str]]:
-        class SentenceGraph:
-            def __init__(self) -> None:
-                self._graph = {}
-
-            @property
-            def num_of_node(self) -> int:
-                return len(self._graph)
-
-            def add_edge(
-                self, u_id: str, v_id: str, distance: int, direct: bool = True
-            ) -> None:
-                if u_id not in self._graph:
-                    self._graph[u_id] = [(v_id, distance)]
-                else:
-                    if (v_id, distance) not in self._graph[u_id]:
-                        self._graph[u_id].append((v_id, distance))
-
-                if v_id not in self._graph:
-                    if direct:
-                        self._graph[v_id] = []
-                    else:
-                        self._graph[v_id] = [(u_id, distance)]
-
-            def find_shortest_paths(self, start_id: str, end_id: str) -> list[str]:
-                # By Dijkstra
-                predecessor = {id: None for id in self._graph}
-                distance = {id: None for id in self._graph}
-                distance[start_id] = 0
-
-                priority_queue = [(0, start_id)]
-                while priority_queue:
-                    current_distance, current_id = heapq.heappop(priority_queue)
-
-                    for neighbor_id, neighbor_weight in self._graph[current_id]:
-                        neg_new_distance = current_distance + neighbor_weight
-
-                        if distance[neighbor_id] is None:
-                            distance[neighbor_id] = neg_new_distance
-                            heapq.heappush(
-                                priority_queue, (neg_new_distance, neighbor_id)
-                            )
-                            predecessor[neighbor_id] = set([current_id])
-                        else:
-
-                            if neg_new_distance < distance[neighbor_id]:
-                                distance[neighbor_id] = neg_new_distance
-                                heapq.heappush(
-                                    priority_queue, (neg_new_distance, neighbor_id)
-                                )
-                                predecessor[neighbor_id] = set([current_id])
-                            elif neg_new_distance == distance[neighbor_id]:
-                                predecessor[neighbor_id].add(current_id)
-
-                # Get the path
-                def get_path(
-                    predecessor: dict[str, set], end_id: str
-                ) -> list[list[str]]:
-
-                    def dfs(current_id: str) -> list[list[str]]:
-                        if current_id == start_id:
-                            return [[start_id]]
-
-                        if predecessor[current_id] is None:
-                            return []
-
-                        paths = []
-                        for pred in predecessor[current_id]:
-                            paths.extend([path + [current_id] for path in dfs(pred)])
-                        return paths
-
-                    return dfs(end_id)
-
-                return get_path(predecessor, end_id)
-
+    def new_reconstruct(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
         if not keystroke:
             return []
 
@@ -702,9 +637,9 @@ class KeyEventHandler:
 
         token_pool = set([token for sep in possible_seps for token in sep])
         new_possible_seps = []
-        for sep in possible_seps:
+        for sep_tokens in possible_seps:
             new_sep = []
-            for token in sep:
+            for token in sep_tokens:
                 is_sep = False
                 for i in range(1, len(token)):
                     if token[:i] in token_pool:
@@ -718,37 +653,15 @@ class KeyEventHandler:
         new_possible_seps.extend(possible_seps)
 
         self.logger.info("Creating Graph with %d possible seps", len(new_possible_seps))
-        id_maps = {}
-        graph = SentenceGraph()
-        for sep in new_possible_seps:
-            prev_str = ""
-            prev_token_id = "<start>"
-            for token in sep:
-                empty_token_id = f"<none>_{len(prev_str)}_{len(prev_str)}"
-                token_id = f"{token}_{len(prev_str)}_{len(prev_str + token)}"  # Hash it
 
-                id_maps[token_id] = token
-                graph.add_edge(prev_token_id, empty_token_id, 0)
-                graph.add_edge(empty_token_id, token_id, self.get_token_distance(token))
-                prev_str += token
-                prev_token_id = token_id
-            graph.add_edge(prev_token_id, "<end>", 0)
+        sentence_graph = SentenceGraph()
+        for sep_tokens in new_possible_seps:
+            sep_tokens = [
+                (token, self.get_token_distance(token)) for token in sep_tokens
+            ]
+            sentence_graph.add_token_path(sep_tokens)
 
-        shortest_paths = graph.find_shortest_paths("<start>", "<end>")
-        self.logger.info("Found %d shortest paths", len(shortest_paths))
-
-        possible_paths = []
-        for path in shortest_paths:
-            path = list(
-                filter(
-                    lambda x: x not in ["<start>", "<end>"]
-                    and not x.startswith("<none>"),
-                    path,
-                )
-            )
-            possible_paths.append([id_maps[id] for id in path])
-        possible_paths = sorted(possible_paths, key=len, reverse=False)
-
+        possible_paths = sentence_graph.get_sentence()
         return possible_paths[:top_n]
 
     def old_phase1(self, keystroke: str) -> list[str]:
