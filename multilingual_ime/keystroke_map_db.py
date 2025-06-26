@@ -5,6 +5,7 @@ A module for interacting with the keystroke mapping database.
 import sqlite3
 import threading
 from pathlib import Path
+from typing import Union
 
 from .trie import modified_levenshtein_distance
 from .core.custom_decorators import lru_cache_with_doc
@@ -19,7 +20,7 @@ class KeystrokeMappingDB:
         db_path (str): The path to the database (Sqlite DB) file.
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: Union[str, Path]):
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file {db_path} not found")
 
@@ -28,7 +29,7 @@ class KeystrokeMappingDB:
         self._lock = threading.Lock()
         self._conn.create_function("levenshtein", 2, modified_levenshtein_distance)
 
-    def get_by_keystroke(self, keystroke: str) -> list[tuple[str, str, int]]:
+    def get_word(self, keystroke: str) -> list[tuple[str, str, int]]:
         """
         Get the **(keystroke, word, frequency)** tuple with the given keystroke from the database.
 
@@ -47,7 +48,9 @@ class KeystrokeMappingDB:
             return self._cursor.fetchall()
 
     @lru_cache_with_doc(maxsize=128)
-    def fuzzy_get_by_keystroke(self, keystroke: str, max_distance: int) -> list[str]:
+    def fuzzy_get_word(
+        self, keystroke: str, max_distance: int
+    ) -> list[tuple[str, str, int]]:
         """
         Get the **(keystroke, word, frequency)** tuple entry with the given keystroke \
         from the database with a Levenshtein distance less than or equal to the given distance.
@@ -61,15 +64,37 @@ class KeystrokeMappingDB:
         """
         with self._lock:
             self._cursor.execute(
-                f"SELECT keystroke, word, frequency FROM keystroke_map \
-                WHERE levenshtein(keystroke, ?) <= {max_distance}",
-                (keystroke,),
+                "SELECT keystroke, word, frequency FROM keystroke_map \
+                WHERE levenshtein(keystroke, ?) <= ?",
+                (keystroke, max_distance),
             )
             return self._cursor.fetchall()
 
+    def fuzzy_get_exist(self, keystroke: str, distance: int) -> bool:
+        """
+        Check if there is any entry in the database with a Levenshtein distance \
+        less than or equal to the given distance.
+
+        Args:
+            keystroke (str): The keystroke to search for.
+            distance (int): The maximum Levenshtein distance to search for.
+
+        Returns:
+            bool: True if there is an entry with a Levenshtein distance less than \
+            or equal to the given distance, False otherwise.
+        """
+        with self._lock:
+            self._cursor.execute(
+                "SELECT EXISTS(SELECT 1 FROM keystroke_map \
+                WHERE levenshtein(keystroke, ?) <= ?)",
+                (keystroke, distance),
+            )
+
+            return bool(self._cursor.fetchone()[0])
+
     @lru_cache_with_doc(maxsize=128)
-    def get_closest(
-        self, keystroke: str, max_search_distance: int = 1
+    def get_closest_word(
+        self, keystroke: str, max_search_distance: int = 2
     ) -> list[tuple[str, str, int]]:
         """
         Get the **(keystroke, word, frequency)** tuple entry with smallest \
@@ -85,15 +110,14 @@ class KeystrokeMappingDB:
         """
 
         # Search for the direct match first
-        result = self.get_by_keystroke(keystroke)
-        if result:
+        if result := self.get_word(keystroke):
             return result
 
-        for distance in range(max_search_distance + 1):
-            result = self.fuzzy_get_by_keystroke(keystroke, distance)
-            if result:
-                return result
-        return []
+        closest_distance = self.get_closest_word_distance(keystroke)
+        if closest_distance > max_search_distance:
+            return []
+
+        return self.fuzzy_get_word(keystroke, closest_distance)
 
     def create_keystroke_map_table(self):
         """
@@ -134,7 +158,7 @@ class KeystrokeMappingDB:
         """
 
         with self._lock:
-            if (keystroke, word, frequency) not in self.get_by_keystroke(keystroke):
+            if (keystroke, word, frequency) not in self.get_word(keystroke):
                 self._cursor.execute(
                     "INSERT INTO keystroke_map (keystroke, word, frequency) VALUES (?, ?, ?)",
                     (keystroke, word, frequency),
@@ -154,16 +178,20 @@ class KeystrokeMappingDB:
         Returns:
             bool: True if the keystroke exists in the database, False otherwise.
         """
+        return bool(self.get_word(keystroke))
 
-        return bool(self.get_by_keystroke(keystroke))
-
-    def closest_word_distance(self, keystroke: str) -> int:
+    @lru_cache_with_doc(maxsize=128)
+    def get_closest_word_distance(
+        self, keystroke: str, max_search_distance: int = 2
+    ) -> int:
         """
         Get the smallest Levenshtein distance between \
         the given keystroke and the words in the database.
 
         Args:
             keystroke (str): The keystroke to search for.
+            max_search_distance (int, optional): The maximum Levenshtein distance to search for. \
+            Defaults to 2.
 
         Returns:
             int: The smallest Levenshtein distance between \
@@ -172,11 +200,13 @@ class KeystrokeMappingDB:
 
         distance = 0
         while True:
-            if self.fuzzy_get_by_keystroke(keystroke, distance):
+            if self.fuzzy_get_exist(keystroke, distance):
                 return distance
+            if distance >= max_search_distance:
+                return max_search_distance
             distance += 1
 
-    def word_to_keystroke(self, word: str) -> list[str]:
+    def word_to_keystroke(self, keystroke_results: str) -> list[str]:
         """
         Get the keystroke of a word in the database.
 
@@ -188,12 +218,10 @@ class KeystrokeMappingDB:
         """
         with self._lock:
             self._cursor.execute(
-                "SELECT keystroke FROM keystroke_map WHERE word = ?", (word,)
+                "SELECT keystroke FROM keystroke_map WHERE word = ?",
+                (keystroke_results,),
             )
-            if word := self._cursor.fetchall():
-                return [w[0] for w in word]
-            else:
-                return []
+            return self._cursor.fetchall()
 
     def word_exists(self, word: str) -> bool:
         """
@@ -273,11 +301,12 @@ class KeystrokeMappingDB:
 
 
 if __name__ == "__main__":
+    # Example usage of the KeystrokeMappingDB class
     import pathlib
 
     path = pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
     db = KeystrokeMappingDB(path)
 
-    print(db.get_closest("su35", 2))
-    print(db.closest_word_distance("u04counsel"))
+    print(db.get_closest_word("su32", 2))
+    print(db.get_closest_word_distance("u04counsel"))
     print(db.word_to_keystroke("你"))

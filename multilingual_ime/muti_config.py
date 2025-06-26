@@ -1,3 +1,4 @@
+from typing import Optional
 from .ime import (
     BOPOMOFO_IME,
     CANGJIE_IME,
@@ -9,9 +10,9 @@ from .ime import (
 
 
 class MultiConfig:
-    def __init__(self, config_dict: dict = None) -> None:
+    def __init__(self, config_dict: Optional[dict] = None) -> None:
         if config_dict:
-            self._config = self._load_config(config_dict)
+            self._config = config_dict
         else:
             self._config = {
                 "selection_page_size": 5,
@@ -52,7 +53,7 @@ class MultiConfig:
             raise ValueError(f"IME {ime_name} not found in config")
 
         if not isinstance(status, bool):
-            raise ValueError(f"status should be a boolean value")
+            raise ValueError(f"The status should be a boolean value got {type(status)}")
 
         self._config["ime_activation_status"][ime_name] = status
 
@@ -62,5 +63,10 @@ class MultiConfig:
 
         return self._config["ime_activation_status"][ime_name]
 
-    def _load_config(self, config_dict: dict):
-        raise NotImplementedError(" _load_config method not implemented")
+    def load_config(self, config_dict: dict) -> None:
+        if not isinstance(config_dict, dict):
+            raise ValueError(f"Config should be a dictionary, got {type(config_dict)}")
+        self._config = config_dict
+
+    def to_dict(self) -> dict:
+        return self._config
