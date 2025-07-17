@@ -140,7 +140,7 @@ if __name__ == "__main__":
                         one_time_change=ONE_TIME_CHANGE_MODE,
                     )
                     start_time = datetime.now()
-                    y_pred = test_key_event_handler.new_reconstruct(test_x)
+                    y_pred = test_key_event_handler._separate_tokens(test_x)
                     time_spend = datetime.now() - start_time
 
                     total_distance = (

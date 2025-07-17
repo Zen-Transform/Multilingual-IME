@@ -91,7 +91,9 @@ def generate_test_case(
 
             ime_list = []
             for currentime_type in mix_imes:
-                ime_list.extend([currentime_type] * (duplicate.count(currentime_type) + 1))
+                ime_list.extend(
+                    [currentime_type] * (duplicate.count(currentime_type) + 1)
+                )
 
         assert len(ime_list) == n_token
     else:
@@ -203,7 +205,7 @@ if __name__ == "__main__":
                 y_pred_tokens = test_ime_handler.end_to_end(x_test_str)
                 y_pred_sentence = "".join(y_pred_tokens)
                 time_spend = (datetime.now() - start_time).total_seconds()
-                y_pred_sep = test_ime_handler.new_reconstruct(x_test_str)[0]
+                y_pred_sep = test_ime_handler._separate_tokens(x_test_str)[0]
                 e2e_correct = (
                     True if y_pred_sentence == "".join(y_label_tokens) else False
                 )
