@@ -15,7 +15,7 @@ from .ime import (
     ENGLISH_IME,
 )
 from .phrase_db import PhraseDataBase
-from .muti_config import MultiConfig
+from .multi_config import MultiConfig
 from .sentence_graph import SentenceGraph
 
 from .ime import (
