@@ -107,8 +107,8 @@ class IME(ABC):
     """
 
     def __init__(self):
-        self.token_detector: IMETokenDetectorDL = None
-        self.keystroke_map_db: KeystrokeMappingDB = None
+        self.token_detector: IMETokenDetectorDL
+        self.keystroke_map_db: KeystrokeMappingDB
 
     @abstractmethod
     def tokenize(self, keystroke: str) -> list[list[str]]:
@@ -318,7 +318,7 @@ class PinyinIME(IME):
                     appendices_solutions = cut_pinyin(pinyin[i:], is_intact)
                     for appendixes in appendices_solutions:
                         ans.append(former + appendixes)
-            if ans == []:
+            if ans:
                 return [[pinyin]]
             return ans
 

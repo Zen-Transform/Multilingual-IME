@@ -5,7 +5,7 @@ from colorama import Fore, Style
 from multilingual_ime.key_event_handler import KeyEventHandler
 
 
-def prompt_boolean_setting(question: str, default_value: bool) -> str:
+def prompt_boolean_setting(question: str, default_value: bool) -> bool:
     while True:
         value = input(
             Fore.BLUE
@@ -45,7 +45,8 @@ class CommandLineIME:
             + "This is a command line interface (CLI) for the multilingual IME.\n"
             + "You can use this IME to type in multiple languages.\n"
             + "The supported languages are: English, Bopomofo, Cangjie, Pinyin.\n"
-            + "If find any bug (possible many XD), please report to us at <https://github.com/Zen-Transform/Multilingual-IME/issues>.\n"
+            + "If find any bug (possible many XD), please report to us at \
+            <https://github.com/Zen-Transform/Multilingual-IME/issues>.\n"
             + Fore.RED
             + "Press ESC to exit\n"
             + Style.RESET_ALL
