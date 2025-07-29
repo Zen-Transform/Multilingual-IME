@@ -1,8 +1,19 @@
+"""
+This module provides utility functions for string manipulation,
+including calculating distances between strings, checking character types,
+and identifying Chinese and English characters and punctuation.
+"""
+
 def modified_levenshtein_distance(s1: str, s2: str) -> int:
     """
     Calculate the modified Levenshtein distance between two strings.
-    The modified Levenshtein distance is the minimum number of single-character edits (insertions, deletions, substitutions, or swaps) required to change one word into the other.
-    The difference between the modified Levenshtein distance and the original Levenshtein distance is that the modified Levenshtein distance allows for swapping two adjacent characters.
+    The modified Levenshtein distance is the minimum number of single-character \
+    edits (insertions, deletions, substitutions, or swaps) required to change \
+    one word into the other.
+    The difference between the modified Levenshtein distance and the original \
+    Levenshtein distance is that the modified Levenshtein distance allows for \
+    swapping two adjacent characters.
+    
     Args:
         s1 (str): The first string.
         s2 (str): The second string.
@@ -18,7 +29,7 @@ def modified_levenshtein_distance(s1: str, s2: str) -> int:
     """
 
     if len(s1) < len(s2):
-        return modified_levenshtein_distance(s2, s1)
+        s1, s2 = s2, s1
 
     if len(s2) == 0:
         return len(s1)
@@ -47,10 +58,13 @@ def modified_levenshtein_distance(s1: str, s2: str) -> int:
     return previous_row[-1]
 
 
-def levenshteain_distance(s1: str, s2: str) -> int:
+def levenshtein_distance(s1: str, s2: str) -> int:
     """
     Calculate the Levenshtein distance between two strings.
-    The Levenshtein distance is the minimum number of single-character edits (insertions, deletions, or substitutions) required to change one word into the other.
+    The Levenshtein distance is the minimum number of \
+    single-character edits (insertions, deletions, or substitutions) \
+    required to change one word into the other.
+
     Args:
         s1 (str): The first string.
         s2 (str): The second string.
@@ -59,14 +73,14 @@ def levenshteain_distance(s1: str, s2: str) -> int:
         int: The Levenshtein distance between the two strings.
 
     Examples:
-        >>> levenshteain_distance("abc", "abcc")  # 1
-        >>> levenshteain_distance("abc", "acb")  # 2
-        >>> levenshteain_distance("flaw", "lawn")  # 2
-        >>> levenshteain_distance("kitten", "sitting")  # 3
+        >>> levenshtein_distance("abc", "abcc")  # 1
+        >>> levenshtein_distance("abc", "acb")  # 2
+        >>> levenshtein_distance("flaw", "lawn")  # 2
+        >>> levenshtein_distance("kitten", "sitting")  # 3
     """
 
     if len(s1) < len(s2):
-        return levenshteain_distance(s2, s1)
+        s1, s2 = s2, s1
 
     if len(s2) == 0:
         return len(s1)
@@ -89,6 +103,14 @@ def levenshteain_distance(s1: str, s2: str) -> int:
 
 
 def is_chinese_character(char: str) -> bool:
+    """
+    Check if a character is a Chinese character.
+    Args:
+        char (str): The character to check.
+    Returns:
+        bool: True if the character is a Chinese character, False otherwise.
+
+    """
     return any(
         [
             "\u4e00" <= char <= "\u9fff",  # CJK Unified Ideographs
@@ -102,10 +124,24 @@ def is_chinese_character(char: str) -> bool:
 
 
 def is_all_chinese_char(text: str) -> bool:
-    return all([is_chinese_character(char) for char in text])
+    """
+    Check if all characters in a string are Chinese characters.
+    Args:
+        text (str): The string to check.
+    Returns:
+        bool: True if all characters are Chinese characters, False otherwise.
+    """
+    return all(is_chinese_character(char) for char in text)
 
 
 def is_english_char(char: str) -> bool:
+    """
+    Check if a character is an English letter.
+    Args:
+        char (str): The character to check.
+    Returns:
+        bool: True if the character is an English letter, False otherwise.
+    """
     return any(
         [
             "\u0041" <= char <= "\u005a",  # Uppercase
@@ -115,6 +151,13 @@ def is_english_char(char: str) -> bool:
 
 
 def is_number(char: str) -> bool:
+    """
+    Check if a character is a number.
+    Args:
+        char (str): The character to check.
+    Returns:
+        bool: True if the character is a number, False otherwise.
+    """
     return any(
         [
             "\u0030" <= char <= "\u0039",  # 0-9
@@ -122,7 +165,14 @@ def is_number(char: str) -> bool:
     )
 
 
-def is_punctuation(char: str) -> bool:
+def is_english_punctuation(char: str) -> bool:
+    """
+    Check if a character is a English punctuation mark.
+    Args:
+        char (str): The character to check.
+    Returns:
+        bool: True if the character is a punctuation mark, False otherwise.
+    """
     return any(
         [
             "\u0021" <= char <= "\u002f",  # !"#$%&'()*+,-./
@@ -134,6 +184,13 @@ def is_punctuation(char: str) -> bool:
 
 
 def is_chinese_punctuation(char: str) -> bool:
+    """
+    Check if a character is a Chinese punctuation mark.
+    Args:
+        char (str): The character to check.
+    Returns:
+        bool: True if the character is a Chinese punctuation mark, False otherwise.
+    """
     return any(
         [
             "\u3000" <= char <= "\u303f",  # CJK Symbols and Punctuation

@@ -1,6 +1,12 @@
 
 
-class KeystrokeTokenizer(): 
+class KeystrokeTokenizer():
+    """
+    A tokenizer for keystrokes, converting strings to token IDs for use in machine learning models.
+    This tokenizer is designed to handle various keystrokes, including letters, numbers,
+    punctuation, and special characters.
+
+    """
     key_labels = [
         "PAD", "<SOS>", "<EOS>", "<UNK>",
         "`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=",
@@ -11,7 +17,6 @@ class KeystrokeTokenizer():
         "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "{", "}", "|",
         "A", "S", "D", "F", "G", "H", "J", "K", "L", ":", "\"",
         "Z", "X", "C", "V", "B", "N", "M", "<", ">", "?",
-        
         "®", " "
     ]
 
@@ -53,13 +58,17 @@ class KeystrokeTokenizer():
 
         id_list = []
         for token in token_list:
-            assert token in cls.key_labels, "Error: can not convert token '{}' is not on list".format(token)
+            assert token in cls.key_labels, f"Error: can not convert token '{token}' is not on list"
             id_list.append(cls.key_labels.index(token))
         return id_list
 
 
     @classmethod
     def key_labels_length(cls):
+        """
+        Returns the length of the key labels list.
+        This is used to determine the size of the one-hot encoding vector.
+        """
         return len(cls.key_labels)
 
 if __name__ == '__main__':

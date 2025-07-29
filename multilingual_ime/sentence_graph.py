@@ -1,8 +1,13 @@
 import heapq
-import re
 
 
 class SentenceGraph:
+    """
+    A Directed Graph to represent sentences as paths of tokens.
+    This graph allows for the addition of token paths and finding the
+    shortest paths, which is the optimal sentence in multilingual input.
+    """
+
     def __init__(self) -> None:
         self._graph = {}
         self._id_maps = {}
@@ -32,7 +37,7 @@ class SentenceGraph:
 
         priority_queue = [(0, 0, start_id)]
         while priority_queue:
-            est_total, current_distance, current_id = heapq.heappop(priority_queue)
+            _, current_distance, current_id = heapq.heappop(priority_queue)
 
             if current_id == end_id:
                 break
@@ -40,9 +45,6 @@ class SentenceGraph:
             for neighbor_id, neighbor_weight in self._graph[current_id]:
                 new_distance = current_distance + neighbor_weight
                 h = self._heuristic[neighbor_id] * 2
-                # print(
-                #     f"Current: {current_id}, Neighbor: {neighbor_id}, current_distance: {current_distance},est_total: {est_total}, heuristic: {h}, neg weigh: {neighbor_weight}, new_distance: {new_distance}"
-                # )
 
                 if distance[neighbor_id] < 0:  # Not visited yet
                     distance[neighbor_id] = new_distance
@@ -74,13 +76,21 @@ class SentenceGraph:
         return [path[::-1]]
 
     def add_token_path(self, tokens: list[tuple]) -> None:
+        """
+        Add a path of tokens to the graph.
+        Each token is a tuple of (token, distance).
+        The distance is the token's minimum distance to a meaningful word.
+        The tokens should be in the order they appear in the sentence.
+        """
+
         new_add_sentence_length = len("".join([token for token, _ in tokens]))
         if self._sentence_length == 0:
             self._sentence_length = new_add_sentence_length
         else:
             if self._sentence_length != new_add_sentence_length:
                 raise ValueError(
-                    f"The add sentence length({new_add_sentence_length}) does not match the Graph's current sentence length{self._sentence_length}."
+                    f"The add sentence length({new_add_sentence_length}) does not match "
+                    f"the Graph's current sentence length{self._sentence_length}."
                 )
 
         prev_str = ""
