@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Union
 
-from .trie import modified_levenshtein_distance
+from .core.F import modified_levenshtein_distance
 from .core.custom_decorators import lru_cache_with_doc
 
 

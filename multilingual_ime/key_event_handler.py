@@ -15,7 +15,7 @@ from .ime import (
     ENGLISH_IME,
 )
 from .phrase_db import PhraseDataBase
-from .muti_config import MultiConfig
+from .multi_config import MultiConfig
 from .sentence_graph import SentenceGraph
 
 from .ime import (
@@ -41,6 +41,24 @@ MAX_SAVE_PRE_POSSIBLE_SENTENCES = 5
 
 
 class KeyEventHandler:
+    """ 
+    The **core** of the Multilingual IME.
+    Handles key events and manages the state of the IME.
+    This class is responsible for processing key events, managing the composition string,
+    and interacting with the phrase and frequency databases.
+
+    Note:
+        - This class is designed to be used as a singleton, \
+        and should not be instantiated multiple times.
+        It is recommended to use the `KeyEventHandler()` directly in the main application.    
+        - A `token` is a string of keystrokes that represents a word in the IMEs. \
+          A `token` can convert to various words in different IMEs.
+        - A `word` is a string of characters that represents a valid word in the IMEs. \
+          A `word` can be a single character (Chinese character) or a string of characters \
+          (English word).
+        - A `phrase` is a string of word (Chinese character) that represents a valid phrase.
+    """
+
     def __init__(self, verbose_mode: bool = False) -> None:
         # Setup logger
         self.logger = logging.getLogger(__name__)
@@ -64,7 +82,6 @@ class KeyEventHandler:
         self.selection_page_size = self._config.SELECTION_PAGE_SIZE
 
         # State Variables
-        self._token_pool_set = set()
         self._pre_possible_sentences = []
         self.have_selected = False
 
@@ -83,7 +100,6 @@ class KeyEventHandler:
         self._total_candidate_word_list = []
 
     def _reset_all_states(self) -> None:
-        self._token_pool_set = set()
         self._pre_possible_sentences = []
         self.have_selected = False
 
@@ -103,23 +119,22 @@ class KeyEventHandler:
         self._total_candidate_word_list = []
 
     def _unfreeze_to_freeze(self) -> None:
-        self._token_pool_set = set()
         self._pre_possible_sentences = []
-        self.freezed_token_sentence = self.separate_english_token(
+        self.freezed_token_sentence = self._separate_english_token(
             self.total_token_sentence
         )  # Bad design here
-        self.freezed_composition_words = self.separate_english_token(
+        self.freezed_composition_words = self._separate_english_token(
             self.total_composition_words
         )
         self.freezed_index = self.freezed_index + len(
-            self.separate_english_token(self.unfreeze_composition_words)
+            self._separate_english_token(self.unfreeze_composition_words)
         )
 
         self.unfreeze_keystrokes = ""
         self.unfreeze_token_sentence = []
         self.unfreeze_composition_words = []
 
-    def separate_english_token(self, tokens: list[str]) -> list[str]:
+    def _separate_english_token(self, tokens: list[str]) -> list[str]:
         #  Special case for English, separate the english word by character
         result = []
         for token in tokens:
@@ -130,18 +145,31 @@ class KeyEventHandler:
         return result
 
     def set_activation_status(self, ime_type: str, status: bool) -> None:
+        """
+        Set the activation status of the IME.
+        Args:
+            ime_type (str): The type of the IME to set the status for.
+            status (bool): The activation status to set.
+        Raises:
+            ValueError: If the IME type is not found in the config.
+            ValueError: If the status is not a boolean value.
+        """
+        # FIXME: expose config directly/ fix raise ValueError
         self._config.setIMEActivationStatus(ime_name=ime_type, status=status)
 
     @property
     def activated_imes(self) -> list[str]:
+        """
+        A list of activated IMEs based on the config.
+        """
         return self._config.ACTIVE_IME
 
     @property
-    def token_pool(self) -> list[str]:
-        return list(self._token_pool_set)
-
-    @property
     def total_composition_words(self) -> list[str]:
+        """
+        The total composition words as a list of strings.
+        This includes both freezed and unfreeze composition words.
+        """
         return (
             self.freezed_composition_words[: self.freezed_index]
             + self.unfreeze_composition_words
@@ -150,6 +178,10 @@ class KeyEventHandler:
 
     @property
     def total_token_sentence(self) -> list[str]:
+        """
+        The total token sentence as a list of strings.
+        This includes both freezed and unfreeze token sentences.
+        """
         return (
             self.freezed_token_sentence[: self.freezed_index]
             + self.unfreeze_token_sentence
@@ -158,10 +190,17 @@ class KeyEventHandler:
 
     @property
     def composition_index(self) -> int:
+        """
+        The current cursor index in the composition string.
+
+        """
         return self.freezed_index + self.unfreeze_index
 
     @property
     def unfreeze_index(self) -> int:
+        """
+        The index of the current unfreeze composition word.
+        """
         return len(self.unfreeze_composition_words)
 
     @property
@@ -177,13 +216,28 @@ class KeyEventHandler:
 
     @property
     def selection_index(self) -> int:
+        """
+        The index of the current selection in the candidate word list.
+        """
         return self._total_selection_index % self.selection_page_size
 
     @property
     def composition_string(self) -> str:
+        """
+        The current composition string, which is the concatenation of all composition words.
+        """
         return "".join(self.total_composition_words)
 
     def handle_key(self, key: str) -> None:
+        """
+        Handle the key event and update the composition string and selection states.
+        Args:
+            key (str): The key event to handle.
+        Raises:
+            ValueError: If the key is not a valid key.
+        """
+        # TODO: Check if the key is valid by creating a set of valid keys
+
         special_keys = ["enter", "left", "right", "down", "up", "esc"]
         if self.commit_string:
             self.logger.info(
@@ -299,33 +353,17 @@ class KeyEventHandler:
                 return
 
     def slow_handle(self):
-        # This is the V2 of the handle_key function, using the new_reconstruct function
-        token_sentences = self.new_reconstruct(self.unfreeze_keystrokes)
+        """
+        Handle the slow process of constructing the unfreeze token \
+        sentence from the unfreeze keystrokes.
+        """
+        token_sentences = self._separate_tokens(self.unfreeze_keystrokes)
         if not token_sentences:
             return
         self.unfreeze_token_sentence = token_sentences[0]
         self.unfreeze_composition_words = self._token_sentence_to_word_sentence(
             self.unfreeze_token_sentence
         )
-
-    def _update_token_pool(self) -> None:
-        for ime_type in self.activated_imes:
-            token_ways = self.ime_handlers[ime_type].tokenize(self.unfreeze_keystrokes)
-            for ways in token_ways:
-                for token in ways:
-                    self._token_pool_set.add(token)
-
-        # Cut large token to small token
-        # TODO: This is a hack, need to find a better way to handle this
-        sorted_tokens = sorted(list(self._token_pool_set), key=len, reverse=True)
-        for token in sorted_tokens:
-            if len(token) > 1:
-                for i in range(1, len(token)):
-                    if token[:i] in self._token_pool_set:
-                        self._token_pool_set.add(token[i:])
-
-    def _is_token_in_pool(self, token: str) -> bool:
-        return token in self._token_pool_set
 
     @lru_cache_with_doc(maxsize=128)
     def get_token_distance(self, token: str) -> int:
@@ -421,31 +459,6 @@ class KeyEventHandler:
         candidates = self.token_to_candidates(token)
         return [candidate.word for candidate in candidates]
 
-    def _sort_possible_sentences(
-        self, possible_sentences: list[list[str]]
-    ) -> list[list[str]]:
-        # Sort the possible sentences by the distance
-        possible_sentences_with_distance = [
-            {
-                "sentence": sentence,
-                "distance": self._calculate_sentence_distance(sentence),
-            }
-            for sentence in possible_sentences
-        ]
-        possible_sentences_with_distance = sorted(
-            possible_sentences_with_distance, key=lambda x: x["distance"]
-        )
-        min_distance = possible_sentences_with_distance[0]["distance"]
-        possible_sentences_with_distance = [
-            r for r in possible_sentences_with_distance if r["distance"] <= min_distance
-        ]
-
-        # Sort the possible sentences by the number of tokens
-        possible_sentences = sorted(
-            possible_sentences_with_distance, key=lambda x: len(x["sentence"])
-        )
-        return [r["sentence"] for r in possible_sentences]
-
     def _token_sentence_to_word_sentence(
         self, token_sentence: list[str], context: str = "", naive_first: bool = False
     ) -> list[str]:
@@ -511,93 +524,6 @@ class KeyEventHandler:
         result = solve_sentence_phrase_matching(sentence_candidates, pre_word)
         return result
 
-    def _reconstruct_sentence_from_pre_possible_sentences(
-        self, target_keystroke: str
-    ) -> list[list[str]]:
-        try:
-            possible_sentences = []
-
-            if self._pre_possible_sentences != []:
-                current_best_sentence = "".join(self._pre_possible_sentences[0])
-
-                if len(target_keystroke) >= len(current_best_sentence):
-                    for pre_possible_sentence in self._pre_possible_sentences:
-                        subtracted_string = target_keystroke[
-                            len("".join(pre_possible_sentence[:-1])) :
-                        ]  # Get the remaining string that haven't been processed
-                        possible_sentences.extend(
-                            [
-                                pre_possible_sentence[:-1] + sub_sentence_results
-                                for sub_sentence_results in self._reconstruct_sentence(
-                                    subtracted_string
-                                )
-                            ]
-                        )
-                else:  # The target_keystroke is shorter than the current best sentence, (e.g. backspace)
-                    for pre_possible_sentence in self._pre_possible_sentences:
-                        if "".join(pre_possible_sentence[:-1]).startswith(
-                            target_keystroke
-                        ):
-                            possible_sentences.append(pre_possible_sentence[:-1])
-
-                assert (
-                    possible_sentences != []
-                ), "No possible sentences found in the case of pre_possible_sentences"
-            else:
-                possible_sentences = self._reconstruct_sentence(target_keystroke)
-        except AssertionError as e:
-            self.logger.info(e)
-            possible_sentences = self._reconstruct_sentence(target_keystroke)
-
-        return possible_sentences
-
-    def _reconstruct_sentence(self, keystroke: str) -> list[list[str]]:
-        """
-        Reconstruct the sentence back to the keystroke by searching all the
-        possible combination of tokens in the token pool.
-
-        Args:
-            keystroke (str): The keystroke to search for
-        Returns:
-            list: A list of **list of str** containing the \
-            possible sentences constructed from the token pool
-        """
-
-        def dp_search(keystroke: str, token_pool: set[str]) -> list[list[str]]:
-            if not keystroke:
-                return []
-
-            ans = []
-            for token_str in token_pool:
-                if keystroke.startswith(token_str):
-                    ans.extend(
-                        [
-                            [token_str] + sub_ans
-                            for sub_ans in dp_search(
-                                keystroke[len(token_str) :], token_pool
-                            )
-                            if sub_ans
-                        ]
-                    )
-
-            if keystroke in token_pool:
-                ans.append([keystroke])
-            return ans
-
-        token_pool = set(
-            [
-                token
-                for token in self.token_pool
-                if self.get_token_distance(token) != float("inf")
-            ]
-        )
-        result = dp_search(keystroke, token_pool)
-        if not result:
-            token_pool = set([token for token in self.token_pool])
-            result = dp_search(keystroke, token_pool)
-
-        return result
-
     def _calculate_sentence_distance(self, sentence: list[str]) -> int:
         """
         Calculate the distance of the sentence based on the token pool.
@@ -620,7 +546,19 @@ class KeyEventHandler:
     def update_user_phrase_db(self, text: str) -> None:
         raise NotImplementedError("update_user_phrase_db is not implemented yet")
 
-    def new_reconstruct(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
+    def _separate_tokens(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
+        """
+        The function to separate the keystrokes into tokens. 
+        Separate the keystrokes into tokens by most logical way.
+        
+        Args:
+            keystroke (str): The keystrokes to separate into tokens.
+            top_n (int): The maximum number of possible separation results to return.
+        Returns:
+            list[list[str]]: A list of possible token sentences, each sentence is a list of tokens.
+        """
+        # In the older version, the function is named as `new_reconstruct()`
+
         if not keystroke:
             return []
 
@@ -635,7 +573,7 @@ class KeyEventHandler:
         # Filter out same sep
         possible_seps = [list(t) for t in set(tuple(token) for token in possible_seps)]
 
-        token_pool = set([token for sep in possible_seps for token in sep])
+        token_pool = {token for sep in possible_seps for token in sep}
         new_possible_seps = []
         for sep_tokens in possible_seps:
             new_sep = []
@@ -664,17 +602,15 @@ class KeyEventHandler:
         possible_paths = sentence_graph.get_sentence()
         return possible_paths[:top_n]
 
-    def old_phase1(self, keystroke: str) -> list[str]:
-        self.unfreeze_keystrokes = keystroke
-        self._update_token_pool()
-        possible_sentences = self._reconstruct_sentence_from_pre_possible_sentences(
-            self.unfreeze_keystrokes
-        )
-        possible_sentences = self._sort_possible_sentences(possible_sentences)
-        return possible_sentences
-
     def end_to_end(self, keystroke: str) -> list[str]:
-        token_sentences = self.new_reconstruct(keystroke)
+        """
+        End-to-end reconstruction of the keystroke to a sentence.
+        Args:
+            keystroke (str): The keystrokes to convert to a sentence.
+        Returns:
+            list[str]: A list of words reconstructed from the keystrokes.
+        """
+        token_sentences = self._separate_tokens(keystroke)
         if not token_sentences:
             return []
         return self._token_sentence_to_word_sentence(token_sentences[0])
@@ -682,14 +618,16 @@ class KeyEventHandler:
 
 if __name__ == "__main__":
     handler = KeyEventHandler()
-    test_case = "soshite baai hello world"
-    phase1_result = handler.old_phase1(test_case)
-    new_result = handler.new_reconstruct(test_case)
+    handler.set_activation_status("japanese", True)
+    handler.set_activation_status("bopomofo", True)
+    handler.set_activation_status("cangjie", False)
+    handler.set_activation_status("english", True)
+    handler.set_activation_status("pinyin", False)
+    test_case = "hello world"
+    new_result = handler._separate_tokens(test_case)
     print("---------------------")
-    print("PHASE1", phase1_result)
     print("NEW", new_result)
     print("---------------------")
-    print("PHASE1", handler._calculate_sentence_distance(phase1_result[0]))
     print("NEW", handler._calculate_sentence_distance(new_result[0]))
     print("---------------------")
     print("PHASE1", handler.end_to_end(test_case))

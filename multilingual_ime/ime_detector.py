@@ -2,44 +2,64 @@ import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-import joblib
 import torch
 from colorama import Fore, Style
 
 from .keystroke_tokenizer import KeystrokeTokenizer
-from .core.custom_decorators import deprecated
 from .deep_models import LanguageDetectorModel, TokenDetectorModel
 
 MAX_TOKEN_SIZE = 30
 
 
 class IMEDetector(ABC):
+    """
+    Abstract base class for IME detectors.
+    This class defines the interface for IME detectors that can be used to
+    detect whether a given keystroke is valid for a specific IME.
+    """
+
     @abstractmethod
     def __init__(self) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
 
     @abstractmethod
-    def load_model(self, model_path: str) -> None:
-        pass
+    def load_model(self, model_path: str | Path) -> None:
+        """
+        Load the model from the specified path.
+        Args:
+            model_path (str | Path): The path to the model file.
+        """
 
     @abstractmethod
-    def predict(self, input: str) -> str:
-        pass
+    def predict(self, input_keystroke: str) -> bool:
+        """
+        Predict whether the given keystroke is valid for the IME.
+        Args:
+            input_keystroke (str): The keystroke to be checked.
+        Returns:
+            bool: True if the keystroke is valid for the IME, False otherwise.
+        """
 
 
 class IMEDetectorOneHot(IMEDetector):
+    """
+    IMEDetectorOneHot is a detector that uses a one-hot encoding NN model
+    to detect whether a given keystrokes is a valid to a specific IME.
+    It is designed to work with a pre-trained model that is loaded from a specified path.
+    """
+
     def __init__(
         self, model_path: str, device: str = "cuda", verbose_mode: bool = False
     ) -> None:
         super().__init__()
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self._classifier = None
-        self._DEVICE = device
+        self._device = device
 
         if device == "cuda" and not torch.cuda.is_available():
             self.logger.warning("cuda is not available, using cpu instead")
-            self._DEVICE = "cpu"
+            self._device = "cpu"
         if isinstance(model_path, Path):
             model_path = str(model_path)
         if not model_path.endswith(".pth"):
@@ -48,22 +68,22 @@ class IMEDetectorOneHot(IMEDetector):
 
         self.load_model(model_path)
         self.logger.info(
-            f"Detector created using the {self._DEVICE} device." if verbose_mode else ""
+            f"Detector created using the {self._device} device." if verbose_mode else ""
         )
 
-    def load_model(self, model_path: str) -> None:
+    def load_model(self, model_path: str | Path) -> None:
         try:
             self._classifier = LanguageDetectorModel(
                 input_shape=MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length(),
                 num_classes=2,
             )
             self._classifier.load_state_dict(
-                torch.load(model_path, map_location=self._DEVICE, weights_only=True)
+                torch.load(model_path, map_location=self._device, weights_only=True)
             )
-            self.logger.info(f"Model loaded from {model_path}")
+            self.logger.info("Model loaded from %s", model_path)
             self.logger.info(self._classifier)
-        except Exception as e:
-            self.logger.error(f"Error loading model {model_path}")
+        except (FileNotFoundError, RuntimeError, OSError) as e:
+            self.logger.error("Error loading model %s", model_path)
             self.logger.error(e)
 
     def _one_hot_encode(self, input_keystroke: str) -> torch.Tensor:
@@ -82,8 +102,12 @@ class IMEDetectorOneHot(IMEDetector):
 
     def predict(self, input_keystroke: str) -> bool:
         embedded_input = self._one_hot_encode(input_keystroke)
-        embedded_input = embedded_input.to(self._DEVICE)
-        self._classifier = self._classifier.to(self._DEVICE)
+        embedded_input = embedded_input.to(self._device)
+        if self._classifier is not None:
+            self._classifier = self._classifier.to(self._device)
+        else:
+            self.logger.error("Classifier model is not loaded.")
+            return False
 
         with torch.no_grad():
             prediction = self._classifier(embedded_input)
@@ -91,74 +115,24 @@ class IMEDetectorOneHot(IMEDetector):
         return prediction == 1
 
 
-@deprecated
-class IMEDetectorSVM(IMEDetector):
-    def __init__(self, svm_model_path: str, tfidf_vectorizer_path: str) -> None:
-        super().__init__()
-        self.classifiers = None
-        self.vectorizer = None
-        self.load_model(svm_model_path, tfidf_vectorizer_path)
-
-    def load_model(self, svm_model_path: str, tfidf_vectorizer_path: str) -> None:
-        try:
-            self.classifiers = joblib.load(svm_model_path)
-            print(f"Model loaded from {svm_model_path}")
-            self.vectorizer = joblib.load(tfidf_vectorizer_path)
-            print(f"Vectorizer loaded from {tfidf_vectorizer_path}")
-
-        except Exception as e:
-            print(f"Error loading model and vectorizer.")
-            print(e)
-
-    def predict(
-        self, input: str, positive_bound: float = 1, neg_bound: float = -0.5
-    ) -> bool:
-        text_features = self.vectorizer.transform([input])
-        predictions = {}
-        for label, classifier in self.classifiers.items():
-            prediction = classifier.decision_function(text_features)[0]
-            predictions[label] = prediction
-
-        if predictions["1"] > positive_bound or (neg_bound < predictions["1"] < 0):
-            return True
-        else:
-            return False
-
-    def predict_eng(
-        self, input: str, positive_bound: float = 0.8, neg_bound: float = -0.7
-    ) -> bool:
-        text_features = self.vectorizer.transform([input])
-        predictions = {}
-        for label, classifier in self.classifiers.items():
-            prediction = classifier.decision_function(text_features)[0]
-            predictions[label] = prediction
-
-        if predictions["1"] > positive_bound or (neg_bound < predictions["1"] < 0):
-            return True
-        else:
-            return False
-
-    def predict_positive(self, input: str) -> float:
-        text_features = self.vectorizer.transform([input])
-        predictions = {}
-        for label, classifier in self.classifiers.items():
-            prediction = classifier.decision_function(text_features)[0]
-            predictions[label] = prediction
-
-        return predictions["1"]
-
 class IMETokenDetectorDL(IMEDetector):
+    """
+    IMEDetectorOneHot is a token detector that uses a one-hot encoding NN model
+    to detect whether a given keystrokes is a token of a specific language.
+    It is designed to work with a pre-trained model that is loaded from a specified path.
+    """
+
     def __init__(
-        self, model_path: str, device: str = "cuda", verbose_mode: bool = False
+        self, model_path: str | Path, device: str = "cuda", verbose_mode: bool = False
     ) -> None:
         super().__init__()
         self.logger.setLevel(logging.INFO if verbose_mode else logging.WARNING)
         self._classifier = None
-        self._DEVICE = device
+        self._device = device
 
         if device == "cuda" and not torch.cuda.is_available():
             self.logger.warning("cuda is not available, using cpu instead")
-            self._DEVICE = "cpu"
+            self._device = "cpu"
         if isinstance(model_path, Path):
             model_path = str(model_path)
         if not model_path.endswith(".pth"):
@@ -167,22 +141,22 @@ class IMETokenDetectorDL(IMEDetector):
 
         self.load_model(model_path)
         self.logger.info(
-            f"Detector created using the {self._DEVICE} device." if verbose_mode else ""
+            f"Detector created using the {self._device} device." if verbose_mode else ""
         )
 
-    def load_model(self, model_path: str) -> None:
+    def load_model(self, model_path: str | Path) -> None:
         try:
             self._classifier = TokenDetectorModel(
                 input_shape=MAX_TOKEN_SIZE * KeystrokeTokenizer.key_labels_length(),
                 num_classes=1,  # only 1 class for token detection
             )
             self._classifier.load_state_dict(
-                torch.load(model_path, map_location=self._DEVICE, weights_only=True)
+                torch.load(model_path, map_location=self._device, weights_only=True)
             )
-            self.logger.info(f"Model loaded from {model_path}")
+            self.logger.info("Model loaded from %s", model_path)
             self.logger.info(self._classifier)
-        except Exception as e:
-            self.logger.error(f"Error loading model {model_path}")
+        except (FileNotFoundError, RuntimeError, OSError) as e:
+            self.logger.error("Error loading model %s", model_path)
             self.logger.error(e)
 
     def _one_hot_encode(self, input_keystroke: str) -> torch.Tensor:
@@ -198,11 +172,15 @@ class IMETokenDetectorDL(IMEDetector):
         )
         one_hot_keystrokes = one_hot_keystrokes.view(-1)  # flatten
         return one_hot_keystrokes
-    
+
     def predict(self, input_keystroke: str) -> bool:
         embedded_input = self._one_hot_encode(input_keystroke)
-        embedded_input = embedded_input.to(self._DEVICE)
-        self._classifier = self._classifier.to(self._DEVICE)
+        embedded_input = embedded_input.to(self._device)
+        if self._classifier is not None:
+            self._classifier = self._classifier.to(self._device)
+        else:
+            self.logger.error("Classifier model is not loaded.")
+            return False
 
         with torch.no_grad():
             prediction = self._classifier(embedded_input)
@@ -232,7 +210,6 @@ if __name__ == "__main__":
             device="cuda",
             verbose_mode=True,
         )
-        input_text = "su3cl3"
         while True:
             input_text = input("Enter text: ")
             is_bopomofo = my_bopomofo_detector.predict(input_text)
