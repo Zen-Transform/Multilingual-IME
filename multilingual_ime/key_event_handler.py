@@ -6,10 +6,7 @@ from pathlib import Path
 from .candidate import Candidate
 from .keystroke_map_db import KeystrokeMappingDB
 from .core.custom_decorators import lru_cache_with_doc
-from .core.F import (
-    modified_levenshtein_distance,
-    is_chinese_character,
-)
+from .core.F import is_chinese_character
 from .ime import (
     IMEFactory,
     ENGLISH_IME,
@@ -400,19 +397,8 @@ class KeyEventHandler:
 
         for ime_type in self.activated_imes:
             if self.ime_handlers[ime_type].is_valid_token(token):
-                result = self.ime_handlers[ime_type].get_token_candidates(token)
                 candidates.extend(
-                    [
-                        Candidate(
-                            word,
-                            key,
-                            frequency,
-                            token,
-                            modified_levenshtein_distance(key, token),
-                            ime_type,
-                        )
-                        for key, word, frequency in result
-                    ]
+                    self.ime_handlers[ime_type].get_token_candidates(token)
                 )
 
         if len(candidates) == 0:
@@ -548,9 +534,9 @@ class KeyEventHandler:
 
     def _separate_tokens(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
         """
-        The function to separate the keystrokes into tokens. 
+        The function to separate the keystrokes into tokens.
         Separate the keystrokes into tokens by most logical way.
-        
+
         Args:
             keystroke (str): The keystrokes to separate into tokens.
             top_n (int): The maximum number of possible separation results to return.

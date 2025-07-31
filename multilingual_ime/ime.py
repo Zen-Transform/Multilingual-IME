@@ -21,6 +21,8 @@ from abc import ABC, abstractmethod
 
 from .ime_detector import IMETokenDetectorDL
 from .keystroke_map_db import KeystrokeMappingDB
+from .candidate import Candidate
+from .core.F import modified_levenshtein_distance
 from .core.custom_decorators import lru_cache_with_doc
 
 # Define the IME names
@@ -110,6 +112,15 @@ class IME(ABC):
         self.token_detector: IMETokenDetectorDL
         self.keystroke_map_db: KeystrokeMappingDB
 
+    @property
+    def ime_type(self) -> str:
+        """
+        Returns the type of the IME as a string.
+        The type is derived from the class name by
+        removing the "IME" suffix and converting to lowercase.
+        """
+        return self.__class__.__name__.replace("IME", "").lower()
+
     @abstractmethod
     def tokenize(self, keystroke: str) -> list[list[str]]:
         """
@@ -137,7 +148,7 @@ class IME(ABC):
              when used with the IME.
         """
 
-    def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+    def get_token_candidates(self, token: str) -> list[Candidate]:
         """
         Retrieve a list of candidate that are closest to the given token in the IME's database.
 
@@ -146,7 +157,23 @@ class IME(ABC):
         Returns:
             list[tuple[str, str, int]]: A list of tuples (keystroke, word, frequency)
         """
-        return self.keystroke_map_db.get_closest_word(token)
+
+        result = self.keystroke_map_db.get_closest_word(token)
+
+        if not result:
+            return []
+
+        return [
+            Candidate(
+                word,
+                key,
+                freq,
+                token,
+                modified_levenshtein_distance(key, token),
+                self.ime_type,
+            )
+            for key, word, freq in result
+        ]
 
     def is_valid_token(self, keystroke: str) -> bool:
         """
@@ -402,12 +429,25 @@ class EnglishIME(IME):
         return super().is_valid_token(keystroke)
 
     # Override
-    def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+    def get_token_candidates(self, token: str) -> list[Candidate]:
         results = self.keystroke_map_db.get_closest_word(token)
         new_results = []
-        for r in results:
-            if r[0].lower() == token.lower():
-                new_results.append((r[0], token, r[2]))
+        for key, _, freq in results:
+            if key.lower() == token.lower():
+                # This handles the case where the token contains uppercase letters
+                # Since the keystroke map db only contains lowercase letters, if user typed
+                # "Hello", the db will return "hello" as the closest word, but we
+                # want to return "Hello" as the candidate
+                new_results.append(
+                    Candidate(
+                        token,
+                        key,
+                        freq,
+                        token,
+                        0,
+                        self.ime_type,
+                    )
+                )
         return new_results
 
     def string_to_keystroke(self, string: str) -> str:
