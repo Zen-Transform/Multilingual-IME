@@ -4,7 +4,6 @@ from .ime import (
     CANGJIE_IME,
     ENGLISH_IME,
     PINYIN_IME,
-    SPECIAL_IME,
     JAPANESE_IME,
 )
 
@@ -23,8 +22,7 @@ class MultiConfig:
                     CANGJIE_IME: True,
                     ENGLISH_IME: True,
                     PINYIN_IME: True,
-                    JAPANESE_IME: True,
-                    SPECIAL_IME: True,
+                    JAPANESE_IME: True
                 },
             }
 

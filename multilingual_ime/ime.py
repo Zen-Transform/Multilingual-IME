@@ -23,7 +23,7 @@ from .ime_detector import IMETokenDetectorDL
 from .keystroke_map_db import KeystrokeMappingDB
 from .candidate import Candidate
 from .core.F import modified_levenshtein_distance
-from .core.custom_decorators import lru_cache_with_doc
+from .core.custom_decorators import lru_cache_with_doc, deprecated
 
 # Define the IME names
 BOPOMOFO_IME = "bopomofo"
@@ -46,6 +46,10 @@ JAPANESE_IME_DB_PATH = Path(__file__).parent / "src" / "japanese_keystroke_map.d
 
 # Define IME valid keystroke set
 BOPOMOFO_VALID_KEYSTROKE_SET = set("1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/- ")
+BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET = set(
+    ["©[", "©]", "©{", "©}", "©;", "©:", "©'", "©,", "©.", "©?"]
+)
+
 CANGJIE_VALID_KEYSTROKE_SET = set(" qwertyuiopasdfghjklzxcvbnm")
 PINYIN_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 ENGLISH_VALID_KEYSTROKE_SET = set(
@@ -101,6 +105,17 @@ JAPANESE_IME_TOKEN_DETECTOR_MODEL_PATH = (
     / "one_hot_dl_token_model_japanese_2025-03-20.pth"
 )
 
+
+def separate_by_control_characters(
+    keystroke: str, control_char: str = "©"
+) -> list[str]:
+
+    # Split and keep the control character with its next character
+    tokens = []
+    pattern = re.compile(f"(?:[^{control_char}]+|{control_char}.)")
+    for match in pattern.finditer(keystroke):
+        tokens.append(match.group())
+    return tokens
 
 class IME(ABC):
     """
@@ -237,6 +252,9 @@ class BopomofoIME(IME):
             > BOPOMOFO_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
+        if keystroke in BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET:
+            return True
+
         if any(c not in BOPOMOFO_VALID_KEYSTROKE_SET for c in keystroke):
             return False
         return super().is_valid_token(keystroke)
@@ -453,7 +471,9 @@ class EnglishIME(IME):
     def string_to_keystroke(self, string: str) -> str:
         raise NotImplementedError("EnglishIME does not support string_to_keystroke")
 
-
+@deprecated(
+    "SpecialCharacterIME is deprecated, use EnglishIME with special characters support instead."
+)
 class SpecialCharacterIME(IME):
     """
     An implementation of the Special Character Input Method Editor (IME) that supports tokenization,
