@@ -55,6 +55,9 @@ PINYIN_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 ENGLISH_VALID_KEYSTROKE_SET = set(
     " abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+ENGLISH_VALID_SPECIAL_KEYSTROKE_SET = set(
+    " `~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?"
+)
 JAPANESE_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 
 # Define IME token length
@@ -440,6 +443,9 @@ class EnglishIME(IME):
             return False
         if keystroke == " ":
             return True
+        if keystroke in ENGLISH_VALID_SPECIAL_KEYSTROKE_SET:
+            return True
+
         if len(keystroke) > 2 and " " in keystroke:
             return False
         if any(c not in ENGLISH_VALID_KEYSTROKE_SET for c in keystroke):
