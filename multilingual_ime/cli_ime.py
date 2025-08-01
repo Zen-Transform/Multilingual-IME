@@ -100,6 +100,9 @@ class CommandLineIME:
             "cangjie", self.cangjie_mode_enabled
         )
         self.key_event_handler.set_activation_status("pinyin", self.pinyin_mode_enabled)
+        self.key_event_handler.set_activation_status(
+            "japanese", self.japanese_mode_enabled
+        )
         print("Initialization time: ", time.time() - start_time)
         self._run_timer = None
         self.time_spend = 0
@@ -130,6 +133,8 @@ class CommandLineIME:
                     self.key_event_handler.handle_key("©" + event.name)
                 elif keyboard.is_pressed("shift") and event.name != "shift":
                     self.key_event_handler.handle_key(event.name.upper())
+                elif event.name == "space":
+                    self.key_event_handler.handle_key(" ")
                 else:
                     self.key_event_handler.handle_key(event.name)
 

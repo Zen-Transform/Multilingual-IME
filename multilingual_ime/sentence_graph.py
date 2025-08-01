@@ -90,7 +90,7 @@ class SentenceGraph:
             if self._sentence_length != new_add_sentence_length:
                 raise ValueError(
                     f"The add sentence length({new_add_sentence_length}) does not match "
-                    f"the Graph's current sentence length{self._sentence_length}."
+                    f"the Graph's current sentence length({self._sentence_length})."
                 )
 
         prev_str = ""

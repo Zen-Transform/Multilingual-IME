@@ -10,24 +10,37 @@ from .core.F import is_chinese_character
 from .ime import (
     IMEFactory,
     ENGLISH_IME,
+    BOPOMOFO_VALID_KEYSTROKE_SET,
+    BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET,
+    ENGLISH_VALID_KEYSTROKE_SET,
+    PINYIN_VALID_KEYSTROKE_SET,
+    CANGJIE_VALID_KEYSTROKE_SET,
+    JAPANESE_VALID_KEYSTROKE_SET,
+    separate_by_control_characters,
 )
 from .phrase_db import PhraseDataBase
 from .multi_config import MultiConfig
 from .sentence_graph import SentenceGraph
 
-from .ime import (
-    BOPOMOFO_VALID_KEYSTROKE_SET,
-    ENGLISH_VALID_KEYSTROKE_SET,
-    PINYIN_VALID_KEYSTROKE_SET,
-    CANGJIE_VALID_KEYSTROKE_SET,
-    JAPANESE_VALID_KEYSTROKE_SET,
-)
+FUNCTIONAL_KEYS = [
+    "up",
+    "down",
+    "left",
+    "right",
+    "enter",
+    "backspace",
+    "delete",
+    "tab",
+    "escape",
+    "CapsLock",
+]
 
 TOTAL_VALID_KEYSTROKE_SET = (
     BOPOMOFO_VALID_KEYSTROKE_SET.union(ENGLISH_VALID_KEYSTROKE_SET)
     .union(PINYIN_VALID_KEYSTROKE_SET)
     .union(CANGJIE_VALID_KEYSTROKE_SET)
     .union(JAPANESE_VALID_KEYSTROKE_SET)
+    .union(BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET)
 )
 
 CHINESE_PHRASE_DB_PATH = Path(__file__).parent / "src" / "chinese_phrase.db"
@@ -225,104 +238,117 @@ class KeyEventHandler:
         """
         return "".join(self.total_composition_words)
 
-    def handle_key(self, key: str) -> None:
+    @property
+    def in_typing_mode(self) -> bool:
+        """
+        Check if the IME is in typing mode.
+        Typing mode is when the composition string is not empty
+        """
+        return bool(self.composition_string)
+
+    def handle_key(self, key: str) -> bool:
         """
         Handle the key event and update the composition string and selection states.
         Args:
             key (str): The key event to handle.
-        Raises:
-            ValueError: If the key is not a valid key.
+        Returns:
+            bool: True if the key is handled, False otherwise.
         """
-        # TODO: Check if the key is valid by creating a set of valid keys
-
-        special_keys = ["enter", "left", "right", "down", "up", "esc"]
+        # Reset the commit string if it is not empty
         if self.commit_string:
             self.logger.info(
                 "Commit string: (%s) is not empty, reset to empty", self.commit_string
             )
             self.commit_string = ""
 
-        if key in special_keys:
-            if self.in_selection_mode:
-                if key == "down":
-                    if (
-                        self._total_selection_index
-                        < len(self._total_candidate_word_list) - 1
-                    ):
-                        self._total_selection_index += 1
-                elif key == "up":
-                    if self._total_selection_index > 0:
-                        self._total_selection_index -= 1
-                elif (
-                    key == "enter"
-                ):  # Overwrite the composition string & reset selection states
-                    self.have_selected = True
-                    selected_word = self._total_candidate_word_list[
-                        self._total_selection_index
-                    ]
-                    self.freezed_composition_words[self.composition_index - 1] = (
-                        selected_word
-                    )
-                    # ! Recalculate the index
-                    self.freezed_index = self.freezed_index + len(selected_word) - 1
-                    self._reset_selection_states()
-                elif key == "left":  # Open side selection ?
-                    pass
-                elif key == "right":
-                    pass
-                elif key == "esc":
-                    self._reset_selection_states()
-                else:
-                    print(f"Invalid Special key: {key}")
+        # Check if the key is valid (key filtering)
+        if key in TOTAL_VALID_KEYSTROKE_SET:
+            self.handle_normal_key(key)
+            return True
+        if self.in_typing_mode and key in FUNCTIONAL_KEYS:
+            self.handle_functional_key(key)
+            return True
 
-                return
+        print(f"Unhandled key (pass to OS): {key}")
+        return False
+
+    def handle_functional_key(self, key: str) -> None:
+        """
+        Handle the functional key events.
+        Args:
+            key (str): The functional key event to handle.
+        Raises:
+            ValueError: If the key is not a valid functional key.
+        """
+        if key not in FUNCTIONAL_KEYS:
+            raise ValueError(f"Invalid functional key: {key}")
+
+        if self.in_selection_mode:
+            if key == "down":
+                self._total_selection_index = (self._total_selection_index + 1) % len(
+                    self._total_candidate_word_list
+                )
+            elif key == "up":
+                self._total_selection_index = (self._total_selection_index - 1) % len(
+                    self._total_candidate_word_list
+                )
+            elif (
+                key == "enter"
+            ):  # Overwrite the composition string & reset selection states
+                self.have_selected = True
+                selected_word = self._total_candidate_word_list[
+                    self._total_selection_index
+                ]
+                self.freezed_composition_words[self.composition_index - 1] = (
+                    selected_word
+                )
+                # ! Recalculate the index
+                self.freezed_index = self.freezed_index + len(selected_word) - 1
+                self._reset_selection_states()
+            elif key == "left":  # Open side selection ?
+                pass
+            elif key == "right":
+                pass
+            elif key == "esc":
+                self._reset_selection_states()
             else:
-                if (
-                    key == "enter"
-                ):  # Commit the composition string, update the db & reset all states
-                    self.commit_string = self.composition_string
-                    self._unfreeze_to_freeze()
-                    if self.auto_phrase_learn:
-                        self.update_user_phrase_db(self.composition_string)
-                    if self.auto_frequency_learn:
-                        self.update_user_frequency_db()
-                    self._reset_all_states()
-                elif key == "left":
-                    self._unfreeze_to_freeze()
-                    if self.freezed_index > 0:
-                        self.freezed_index -= 1
-                elif key == "right":
-                    self._unfreeze_to_freeze()
-                    if self.freezed_index < len(self.total_composition_words):
-                        self.freezed_index += 1
-                elif key == "down":  # Enter selection mode
-                    self._unfreeze_to_freeze()
-                    if (
-                        len(self.total_token_sentence) > 0
-                        and self.composition_index > 0
-                    ):
-                        token = self.total_token_sentence[self.composition_index - 1]
-                        if not self.ime_handlers[ENGLISH_IME].is_valid_token(token):
-                            self._total_candidate_word_list = (
-                                self._get_token_candidate_words(token)
-                            )
-                            if len(self._total_candidate_word_list) > 1:
-                                # Only none-english token can enter selection mode, and
-                                # the candidate list should have more than 1 candidate
-                                self.in_selection_mode = True
-                elif key == "esc":
-                    self._reset_all_states()
-                else:
-                    print(f"Invalid Special key: {key}")
+                print(f"Unhandled functional key (in selection mode): {key}")
 
-                return
+            return
         else:
             if (
-                self.in_selection_mode
-            ):  # If in selection mode and keep typing, reset the selection states
-                self._reset_selection_states()
-
-            if key == "backspace":
+                key == "enter"
+            ):  # Commit the composition string, update the db & reset all states
+                self.commit_string = self.composition_string
+                self._unfreeze_to_freeze()
+                if self.auto_phrase_learn:
+                    self.update_user_phrase_db(self.composition_string)
+                if self.auto_frequency_learn:
+                    self.update_user_frequency_db()
+                self._reset_all_states()
+            elif key == "left":
+                self._unfreeze_to_freeze()
+                if self.freezed_index > 0:
+                    self.freezed_index -= 1
+            elif key == "right":
+                self._unfreeze_to_freeze()
+                if self.freezed_index < len(self.total_composition_words):
+                    self.freezed_index += 1
+            elif key == "down":  # Enter selection mode
+                self._unfreeze_to_freeze()
+                if len(self.total_token_sentence) > 0 and self.composition_index > 0:
+                    token = self.total_token_sentence[self.composition_index - 1]
+                    if not self.ime_handlers[ENGLISH_IME].is_valid_token(token):
+                        self._total_candidate_word_list = (
+                            self._get_token_candidate_words(token)
+                        )
+                        if len(self._total_candidate_word_list) > 1:
+                            # Only none-english token can enter selection mode, and
+                            # the candidate list should have more than 1 candidate
+                            self.in_selection_mode = True
+            elif key == "esc":
+                self._reset_all_states()
+            elif key == "backspace":
                 if self.unfreeze_index > 0:
                     self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1]
                     self.unfreeze_composition_words = self.unfreeze_composition_words[
@@ -336,18 +362,45 @@ class KeyEventHandler:
                         )
                         self.freezed_index -= 1
                         return
-            elif key == "space":
-                self.unfreeze_keystrokes += " "
-                self.unfreeze_composition_words += [" "]
-            elif key in TOTAL_VALID_KEYSTROKE_SET:
-                self.unfreeze_keystrokes += key
-                self.unfreeze_composition_words += [key]
-            elif key.startswith("©"):
-                self.unfreeze_keystrokes += key
-                self.unfreeze_composition_words += [key[1:]]
+            elif key == "delete":
+                if self.freezed_index >= 0 and self.freezed_index < len(
+                    self.freezed_composition_words
+                ):
+                    self.freezed_composition_words = (
+                        self.freezed_composition_words[: self.freezed_index]
+                        + self.freezed_composition_words[self.freezed_index + 1 :]
+                    )
             else:
-                print(f"Invalid key: {key}")
-                return
+                print(f"Unhandled functional key: {key}")
+
+            return
+
+    def handle_normal_key(self, key: str) -> None:
+        """
+        Handle the normal key events.
+        Args:
+            key (str): The normal key event to handle.
+        Raises:
+            ValueError: If the key is not a valid normal key.
+        """
+        if key not in TOTAL_VALID_KEYSTROKE_SET:
+            raise ValueError(f"Invalid normal key: {key}")
+
+        if (
+            self.in_selection_mode
+        ):  # If in selection mode and keep typing, reset the selection states
+            self._reset_selection_states()
+
+
+        if key in TOTAL_VALID_KEYSTROKE_SET:
+            self.unfreeze_keystrokes += key
+            self.unfreeze_composition_words += [key]
+        elif key.startswith("©"):
+            self.unfreeze_keystrokes += key
+            self.unfreeze_composition_words += [key[1:]]
+        else:
+            print(f"Unhandled normal key: {key}")
+            return
 
     def slow_handle(self):
         """
@@ -554,6 +607,11 @@ class KeyEventHandler:
             token_ways = self.ime_handlers[ime_type].tokenize(keystroke)
             possible_seps.extend(token_ways)
 
+        # sep by ©
+        possible_seps.append(
+            separate_by_control_characters(keystroke, control_char="©")
+        )
+        self.logger.info("Possible seps: %s", possible_seps)
         # Filter out empty sep
         possible_seps = [sep for sep in possible_seps if sep]
         # Filter out same sep
@@ -586,6 +644,12 @@ class KeyEventHandler:
             sentence_graph.add_token_path(sep_tokens)
 
         possible_paths = sentence_graph.get_sentence()
+
+        self.logger.info(
+            "Found %d possible paths %s",
+            len(possible_paths),
+            possible_paths,
+        )
         return possible_paths[:top_n]
 
     def end_to_end(self, keystroke: str) -> list[str]:
