@@ -305,6 +305,24 @@ if __name__ == "__main__":
     path = pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
     db = KeystrokeMappingDB(path)
 
-    print(db.get_closest_word("su32", 2))
-    print(db.get_closest_word_distance("u04counsel"))
-    print(db.word_to_keystroke("你"))
+    # print(db.get_closest_word("su32", 2))
+    # print(db.get_closest_word_distance("u04counsel"))
+    # print(db.word_to_keystroke("你"))
+
+    total = [
+        ("©[", ["【", "「", "『", "〔", "︹", "︻", "﹁", "﹃", "﹝", "［", "｢"]),
+        ("©]", ["】", "」", "』", "〕", "︺", "︼", "﹂", "﹄", "﹞", "］", "｣"]),
+        ("©{", ["｛", "︷", "﹛"]),
+        ("©}", ["｝", "︸", "﹜"]),
+        ("©;", ["；", "﹔"]),
+        ("©:", ["：", "︰", "﹕"]),
+        ("©'", ["、", "‘", "’", "′"]),
+        ("©,", ["，", "、", "﹐", "﹑"]),
+        ("©.", ["。", "·", "‧", "﹒", "."]),
+        ("©?", ["？"]),
+    ]
+
+    for keystroke, words in total:
+        for word in words:
+            db.insert(keystroke, word, 1)
+            print(f"Inserted {keystroke} -> {word}")
