@@ -154,8 +154,10 @@ class CommandLineIME:
     def composition_with_cursor_string(self):
         total_string = []
         total_composition_words = self.key_event_handler.total_composition_words
-        freezed_index = self.key_event_handler.freezed_index
-        unfreeze_composition_words = self.key_event_handler.unfreeze_composition_words
+        freezed_index = self.key_event_handler._freezed_index
+        unfreeze_composition_words = [
+            c.word for c in self.key_event_handler._unfreeze_candidate_sentence
+        ]
         composition_index = self.key_event_handler.composition_index
 
         for i, word in enumerate(total_composition_words):
