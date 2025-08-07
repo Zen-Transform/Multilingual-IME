@@ -1,6 +1,7 @@
-# Multilingual IME
+# Multilingual IME (MIME)
 
 ![pypi](https://img.shields.io/pypi/v/multilingual_ime)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/multilingual_ime)
 
 Multilingual IME is a package of input method editor (IME) core that leverage AI and algorithms to enable cross-typing between 3+ different input methods.
 There are two derivative user interface implementations compatible with both Windows and the Chrome browser ([See related projects](#related-projects)).
@@ -12,7 +13,8 @@ Current supported input methods
 | English | English | 10,000 words |
 | Bopomofo (Zhuyin) 注音 | Chinese | 15,7744 characters |
 | Cangjie 倉頡 | Chinese | 6,308 characters |
- | Pinyin 無聲調拼音 | Chinese | 6,235 characters|
+| Pinyin 無聲調拼音 | Chinese | 6,235 characters|
+| Japanese 日文 | Japanese | x |
 
 | Languages | Vocabulary database |
 | ---- | :---- |
@@ -21,8 +23,8 @@ Current supported input methods
 
 ### Related Projects
 
-* [PolyKey-win](https://github.com/Zen-Transform/polykey-win) : Input method editor on Windows
-* [PolyKey-web](https://github.com/Zen-Transform/PolyKey-web) : Input method editor as Chrome extension
+* [MIME-win](https://github.com/Zen-Transform/MIME-win) : Input method editor on Windows
+* [MIME-web](https://github.com/Zen-Transform/MIME-web) : Input method editor as Chrome extension
 
 ## Install
 
@@ -41,13 +43,7 @@ Current supported input methods
 
 ## Development
 
-### Dependency
-
-Package manager: [Poetry](https://python-poetry.org/)  
-
-* python: >=3.9 <3.10
-* pytorch: ^2.3.1
-* numpy: <2.0
+* Package manager: [Poetry](https://python-poetry.org/)
 
 ### Project Structure
 
