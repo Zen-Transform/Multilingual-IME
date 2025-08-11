@@ -34,6 +34,7 @@ class SentenceGraph:
         predecessor = {node_id: set() for node_id in self._graph}
         distance = {node_id: -1 for node_id in self._graph}
         distance[start_id] = 0
+        k = 2  # Weight for the distance in heuristic
 
         priority_queue = [(0, 0, start_id)]
         while priority_queue:
@@ -44,12 +45,13 @@ class SentenceGraph:
 
             for neighbor_id, neighbor_weight in self._graph[current_id]:
                 new_distance = current_distance + neighbor_weight
-                h = self._heuristic[neighbor_id] * 2
+                h = self._heuristic[neighbor_id]
 
                 if distance[neighbor_id] < 0:  # Not visited yet
                     distance[neighbor_id] = new_distance
                     heapq.heappush(
-                        priority_queue, (new_distance + h, new_distance, neighbor_id)
+                        priority_queue,
+                        (new_distance * k + h, new_distance, neighbor_id),
                     )
                     predecessor[neighbor_id] = set([current_id])
                 else:
@@ -57,7 +59,7 @@ class SentenceGraph:
                         distance[neighbor_id] = new_distance
                         heapq.heappush(
                             priority_queue,
-                            (new_distance + h, new_distance, neighbor_id),
+                            (new_distance * k + h, new_distance, neighbor_id),
                         )
                         predecessor[neighbor_id] = set([current_id])
                     elif new_distance == distance[neighbor_id]:
@@ -90,7 +92,7 @@ class SentenceGraph:
             if self._sentence_length != new_add_sentence_length:
                 raise ValueError(
                     f"The add sentence length({new_add_sentence_length}) does not match "
-                    f"the Graph's current sentence length{self._sentence_length}."
+                    f"the Graph's current sentence length({self._sentence_length})."
                 )
 
         prev_str = ""

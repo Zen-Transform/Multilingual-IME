@@ -21,7 +21,9 @@ from abc import ABC, abstractmethod
 
 from .ime_detector import IMETokenDetectorDL
 from .keystroke_map_db import KeystrokeMappingDB
-from .core.custom_decorators import lru_cache_with_doc
+from .candidate import Candidate
+from .core.F import modified_levenshtein_distance
+from .core.custom_decorators import lru_cache_with_doc, deprecated
 
 # Define the IME names
 BOPOMOFO_IME = "bopomofo"
@@ -44,10 +46,17 @@ JAPANESE_IME_DB_PATH = Path(__file__).parent / "src" / "japanese_keystroke_map.d
 
 # Define IME valid keystroke set
 BOPOMOFO_VALID_KEYSTROKE_SET = set("1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/- ")
+BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET = set(
+    ["©[", "©]", "©{", "©}", "©;", "©:", "©'", "©,", "©.", "©?"]
+)
+
 CANGJIE_VALID_KEYSTROKE_SET = set(" qwertyuiopasdfghjklzxcvbnm")
 PINYIN_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 ENGLISH_VALID_KEYSTROKE_SET = set(
     " abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+ENGLISH_VALID_SPECIAL_KEYSTROKE_SET = set(
+    " `~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?"
 )
 JAPANESE_VALID_KEYSTROKE_SET = set(" abcdefghijklmnopqrstuvwxyz")
 
@@ -100,6 +109,17 @@ JAPANESE_IME_TOKEN_DETECTOR_MODEL_PATH = (
 )
 
 
+def separate_by_control_characters(
+    keystroke: str, control_char: str = "©"
+) -> list[str]:
+
+    # Split and keep the control character with its next character
+    tokens = []
+    pattern = re.compile(f"(?:[^{control_char}]+|{control_char}.)")
+    for match in pattern.finditer(keystroke):
+        tokens.append(match.group())
+    return tokens
+
 class IME(ABC):
     """
     IME is an abstract base class (ABC) that defines the structure \
@@ -109,6 +129,15 @@ class IME(ABC):
     def __init__(self):
         self.token_detector: IMETokenDetectorDL
         self.keystroke_map_db: KeystrokeMappingDB
+
+    @property
+    def ime_type(self) -> str:
+        """
+        Returns the type of the IME as a string.
+        The type is derived from the class name by
+        removing the "IME" suffix and converting to lowercase.
+        """
+        return self.__class__.__name__.replace("IME", "").lower()
 
     @abstractmethod
     def tokenize(self, keystroke: str) -> list[list[str]]:
@@ -137,7 +166,7 @@ class IME(ABC):
              when used with the IME.
         """
 
-    def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+    def get_token_candidates(self, token: str) -> list[Candidate]:
         """
         Retrieve a list of candidate that are closest to the given token in the IME's database.
 
@@ -146,7 +175,23 @@ class IME(ABC):
         Returns:
             list[tuple[str, str, int]]: A list of tuples (keystroke, word, frequency)
         """
-        return self.keystroke_map_db.get_closest_word(token)
+
+        result = self.keystroke_map_db.get_closest_word(token)
+
+        if not result:
+            return []
+
+        return [
+            Candidate(
+                word,
+                key,
+                freq,
+                token,
+                modified_levenshtein_distance(key, token),
+                self.ime_type,
+            )
+            for key, word, freq in result
+        ]
 
     def is_valid_token(self, keystroke: str) -> bool:
         """
@@ -189,7 +234,7 @@ class BopomofoIME(IME):
         def cut_bopomofo_with_regex(bopomofo_keystroke: str) -> list[str]:
             if not bopomofo_keystroke:
                 return []
-            tokens = re.split(r"(?<=3|4|6|7| )", bopomofo_keystroke)
+            tokens = re.split(r"(©.)|(.+?[3467 ])", bopomofo_keystroke)
             ans = [token for token in tokens if token]
             return ans
 
@@ -210,6 +255,9 @@ class BopomofoIME(IME):
             > BOPOMOFO_IME_MAX_TOKEN_LENGTH + IME_TOKEN_LENGTH_VARIANCE
         ):
             return False
+        if keystroke in BOPOMOFO_VALID_SPECIAL_KEYSTROKE_SET:
+            return True
+
         if any(c not in BOPOMOFO_VALID_KEYSTROKE_SET for c in keystroke):
             return False
         return super().is_valid_token(keystroke)
@@ -395,6 +443,9 @@ class EnglishIME(IME):
             return False
         if keystroke == " ":
             return True
+        if keystroke in ENGLISH_VALID_SPECIAL_KEYSTROKE_SET:
+            return True
+
         if len(keystroke) > 2 and " " in keystroke:
             return False
         if any(c not in ENGLISH_VALID_KEYSTROKE_SET for c in keystroke):
@@ -402,18 +453,33 @@ class EnglishIME(IME):
         return super().is_valid_token(keystroke)
 
     # Override
-    def get_token_candidates(self, token: str) -> list[tuple[str, str, int]]:
+    def get_token_candidates(self, token: str) -> list[Candidate]:
         results = self.keystroke_map_db.get_closest_word(token)
         new_results = []
-        for r in results:
-            if r[0].lower() == token.lower():
-                new_results.append((r[0], token, r[2]))
+        for key, _, freq in results:
+            if key.lower() == token.lower():
+                # This handles the case where the token contains uppercase letters
+                # Since the keystroke map db only contains lowercase letters, if user typed
+                # "Hello", the db will return "hello" as the closest word, but we
+                # want to return "Hello" as the candidate
+                new_results.append(
+                    Candidate(
+                        token,
+                        key,
+                        freq,
+                        token,
+                        0,
+                        self.ime_type,
+                    )
+                )
         return new_results
 
     def string_to_keystroke(self, string: str) -> str:
         raise NotImplementedError("EnglishIME does not support string_to_keystroke")
 
-
+@deprecated(
+    "SpecialCharacterIME is deprecated, use EnglishIME with special characters support instead."
+)
 class SpecialCharacterIME(IME):
     """
     An implementation of the Special Character Input Method Editor (IME) that supports tokenization,

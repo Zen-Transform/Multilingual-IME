@@ -181,30 +181,28 @@ class KeystrokeMappingDB:
         return bool(self.get_word(keystroke))
 
     @lru_cache_with_doc(maxsize=128)
-    def get_closest_word_distance(
-        self, keystroke: str, max_search_distance: int = 2
-    ) -> int:
+    def get_closest_word_distance(self, keystroke: str) -> int:
         """
         Get the smallest Levenshtein distance between \
         the given keystroke and the words in the database.
 
         Args:
             keystroke (str): The keystroke to search for.
-            max_search_distance (int, optional): The maximum Levenshtein distance to search for. \
-            Defaults to 2.
 
         Returns:
             int: The smallest Levenshtein distance between \
             the given keystroke and the words in the database.
         """
-
-        distance = 0
-        while True:
-            if self.fuzzy_get_exist(keystroke, distance):
-                return distance
-            if distance >= max_search_distance:
-                return max_search_distance
-            distance += 1
+        with self._lock:
+            self._cursor.execute(
+                "SELECT MIN(levenshtein(keystroke, ?)) FROM keystroke_map",
+                (keystroke,),
+            )
+            min_distance = self._cursor.fetchone()[0]
+            assert (
+                min_distance is not None
+            ), "No entry found in the database, Min distance is None"
+            return min_distance
 
     def word_to_keystroke(self, keystroke_results: str) -> list[str]:
         """
@@ -304,9 +302,49 @@ if __name__ == "__main__":
     # Example usage of the KeystrokeMappingDB class
     import pathlib
 
-    path = pathlib.Path(__file__).parent / "src" / "bopomofo_keystroke_map.db"
+    path = pathlib.Path(__file__).parent / "src" / "english_keystroke_map.db"
     db = KeystrokeMappingDB(path)
 
-    print(db.get_closest_word("su32", 2))
-    print(db.get_closest_word_distance("u04counsel"))
-    print(db.word_to_keystroke("你"))
+    # print(db.get_closest_word("su32", 2))
+    # print(db.get_closest_word_distance("u04counsel"))
+    # print(db.word_to_keystroke("你"))
+
+    total = [
+        ("`", "`"),
+        ("~", "~"),
+        ("!", "!"),
+        ("@", "@"),
+        ("#", "#"),
+        ("$", "$"),
+        ("%", "%"),
+        ("^", "^"),
+        ("&", "&"),
+        ("*", "*"),
+        ("(", "("),
+        (")", ")"),
+        ("-", "-"),
+        ("_", "_"),
+        ("=", "="),
+        ("+", "+"),
+        ("[", "["),
+        ("{", "{"),
+        ("]", "]"),
+        ("}", "}"),
+        ("\\", "\\"),
+        ("|", "|"),
+        (";", ";"),
+        (":", ":"),
+        ("'", "'"),
+        ('"', '"'),
+        (",", ","),
+        ("<", "<"),
+        (".", "."),
+        (">", ">"),
+        ("/", "/"),
+        ("?", "?"),
+    ]
+
+    for keystroke, words in total:
+        for word in words:
+            db.insert(keystroke, word, 1)
+            print(f"Inserted {keystroke} -> {word}")
