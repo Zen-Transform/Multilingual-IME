@@ -234,7 +234,7 @@ class BopomofoIME(IME):
         def cut_bopomofo_with_regex(bopomofo_keystroke: str) -> list[str]:
             if not bopomofo_keystroke:
                 return []
-            tokens = re.split(r"(?<=3|4|6|7| )", bopomofo_keystroke)
+            tokens = re.split(r"(©.)|(.+?[3467 ])", bopomofo_keystroke)
             ans = [token for token in tokens if token]
             return ans
 

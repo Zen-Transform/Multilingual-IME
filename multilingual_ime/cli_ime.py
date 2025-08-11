@@ -1,3 +1,4 @@
+import sys
 import time
 import keyboard
 from colorama import Fore, Style
@@ -126,17 +127,14 @@ class CommandLineIME:
             self.key_count += 1
             start_time = time.time()
 
-            if event.name in ["enter", "left", "right", "down", "up", "esc"]:
-                self.key_event_handler.handle_key(event.name)
+            if keyboard.is_pressed("ctrl") and event.name != "ctrl":
+                self.key_event_handler.handle_key("©" + event.name)
+            elif keyboard.is_pressed("shift") and event.name != "shift":
+                self.key_event_handler.handle_key(event.name.upper())
+            elif event.name == "space":
+                self.key_event_handler.handle_key(" ")
             else:
-                if keyboard.is_pressed("ctrl") and event.name != "ctrl":
-                    self.key_event_handler.handle_key("©" + event.name)
-                elif keyboard.is_pressed("shift") and event.name != "shift":
-                    self.key_event_handler.handle_key(event.name.upper())
-                elif event.name == "space":
-                    self.key_event_handler.handle_key(" ")
-                else:
-                    self.key_event_handler.handle_key(event.name)
+                self.key_event_handler.handle_key(event.name)
 
             self.key_event_handler.slow_handle()
             self.time_spend = time.time() - start_time
@@ -147,8 +145,12 @@ class CommandLineIME:
         self.update_ui()
 
     def run(self):
-        keyboard.hook(self.on_key_event)
-        keyboard.wait("esc")
+        try:
+            keyboard.hook(self.on_key_event)
+            keyboard.wait("esc")
+        except KeyboardInterrupt:
+            print(Fore.GREEN + "\nExiting IME. Goodbye!" + Style.RESET_ALL)
+            sys.exit(0)
 
     @property
     def composition_with_cursor_string(self):

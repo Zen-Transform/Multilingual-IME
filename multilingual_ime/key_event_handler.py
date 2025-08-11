@@ -354,7 +354,7 @@ class KeyEventHandler:
                 self._reset_all_states()
             elif key == "backspace":
                 if self.unfreeze_index > 0:
-                    self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1]
+                    self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1].rstrip("©")
                     last_candidate_keystroke = self._unfreeze_candidate_sentence[
                         -1
                     ].keystrokes
@@ -422,10 +422,8 @@ class KeyEventHandler:
         sentence from the unfreeze keystrokes.
         """
         token_sentences = self._separate_tokens(self.unfreeze_keystrokes)
-        if not token_sentences:
-            return
         self._unfreeze_candidate_sentence = self._token_sentence_to_candidate_sentence(
-            token_sentences[0]
+            token_sentences
         )
 
     @lru_cache_with_doc(maxsize=128)
@@ -505,7 +503,7 @@ class KeyEventHandler:
 
         def solve_sentence_phrase_matching(
             sentence_candidate: list[list[Candidate]], pre_word: str = ""
-        ):
+        ) -> list[Candidate]:
             # TODO: Consider the context
             def recursive(
                 best_sentence_tokens: list[list[Candidate]],
@@ -593,7 +591,7 @@ class KeyEventHandler:
     def update_user_phrase_db(self, text: str) -> None:
         raise NotImplementedError("update_user_phrase_db is not implemented yet")
 
-    def _separate_tokens(self, keystroke: str, top_n: int = 5) -> list[list[str]]:
+    def _separate_tokens(self, keystroke: str) -> list[str]:
         """
         The function to separate the keystrokes into tokens.
         Separate the keystrokes into tokens by most logical way.
@@ -663,7 +661,7 @@ class KeyEventHandler:
             len(possible_paths),
             possible_paths,
         )
-        return possible_paths[:top_n]
+        return possible_paths[0]
 
     def end_to_end(self, keystroke: str) -> list[str]:
         """
@@ -677,7 +675,7 @@ class KeyEventHandler:
         if not token_sentences:
             return []
         candidate_sentences = self._token_sentence_to_candidate_sentence(
-            token_sentences[0]
+            token_sentences
         )
         return [candidate.word for candidate in candidate_sentences]
 
