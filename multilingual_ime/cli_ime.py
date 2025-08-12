@@ -111,6 +111,8 @@ class CommandLineIME:
         self.key_count = 0
 
     def update_ui(self):
+        if commit_string := self.key_event_handler.commit_string:
+            print(Fore.GREEN + f"Commit: {commit_string}" + Fore.RESET)
         print(
             "{:<}\t\t\t{: <5}{: <20}\t{: <5}\t{: <10}\t{: <10}".format(
                 self.composition_with_cursor_string,

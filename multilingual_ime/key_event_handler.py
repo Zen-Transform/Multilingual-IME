@@ -93,10 +93,10 @@ class KeyEventHandler:
         self.auto_frequency_learn = self._config.AUTO_FREQUENCY_LEARN
         self.selection_page_size = self._config.SELECTION_PAGE_SIZE
 
+        self.commit_string = ""
         # State Variables
         self._freezed_index = 0
         self.unfreeze_keystrokes = ""
-        self.commit_string = ""
         self._freezed_candidate_sentence: list[Candidate] = []
         self._unfreeze_candidate_sentence: list[Candidate] = []
 
@@ -105,10 +105,9 @@ class KeyEventHandler:
         self._total_selection_index = 0
         self._total_candidate_list: list[Candidate] = []
 
-    def _reset_all_states(self) -> None:
+    def _reset_composition_states(self) -> None:
         self._freezed_index = 0
         self.unfreeze_keystrokes = ""
-        self.commit_string = ""
         self._freezed_candidate_sentence = []
         self._unfreeze_candidate_sentence = []
 
@@ -324,7 +323,7 @@ class KeyEventHandler:
                     self.update_user_phrase_db(self.composition_string)
                 if self.auto_frequency_learn:
                     self.update_user_frequency_db()
-                self._reset_all_states()
+                self._reset_composition_states()
             elif key == "left":
                 self._unfreeze_to_freeze()
                 if self._freezed_index > 0:
@@ -351,7 +350,7 @@ class KeyEventHandler:
                             self.in_selection_mode = True
                             self._total_selection_index = 0
             elif key == "esc":
-                self._reset_all_states()
+                self._reset_composition_states()
             elif key == "backspace":
                 if self.unfreeze_index > 0:
                     self.unfreeze_keystrokes = self.unfreeze_keystrokes[:-1].rstrip("©")
@@ -692,7 +691,7 @@ if __name__ == "__main__":
     print("---------------------")
     print("NEW", new_result)
     print("---------------------")
-    print("NEW", handler._calculate_sentence_distance(new_result[0]))
+    print("NEW", handler._calculate_sentence_distance(new_result))
     print("---------------------")
     print("PHASE1", handler.end_to_end(test_case))
     print("NEW", handler.end_to_end(test_case))
