@@ -1,12 +1,12 @@
 [project]
 name = "multilingual-ime"
-version = "0.1.7"
+version = "1.0.0"
 description = ""
 authors = [
     { name = "JY9150", email = "90738099+JY9150@users.noreply.github.com"}
 ]
 readme = "README.md"
-"requires-python" = "^3.13"
+"requires-python" = "~=3.13"
 repository = "https://github.com/Zen-Transform/Multilingual-IME"
 keywords = ["IME", "Multilingual"]
 dynamic =[ "dependencies" ]
